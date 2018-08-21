@@ -24,22 +24,34 @@ func NewRootCmd(args []string) *cobra.Command {
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
 
+			namespace := "dev1"
+			podName := "cassandra-0"
+			containerName := "cassandra"
+			command := "cat docker-entrypoint.sh"
+
+			output, stderr, err := c2s3.Exec(command, containerName, podName, namespace, nil)
+
+			if len(stderr) != 0 {
+				fmt.Println("STDERR:", stderr)
+			}
+			if err != nil {
+				fmt.Printf("Error occured while `exec`ing to the Pod %q, namespace %q, command %q. Error: %+v\n", podName, namespace, command, err)
+			} else {
+				fmt.Println("Output:")
+				fmt.Println(output)
+			}
+
+			return
+
 			s3Region := "eu-central-1"
 			s3Bucket := "nuvo-c2s3-test"
-			filePath := "glide.yaml"
+			filePath := "testfile"
+			buffer := []byte(`First line
+Second line
+Third line`)
 
-			// Open the file for use
-			file, err := os.Open(filePath)
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-			defer file.Close()
-
-			// Get file size and read the file content into a buffer
-			fileInfo, _ := file.Stat()
-			var size = fileInfo.Size()
-			buffer := make([]byte, size)
-			file.Read(buffer)
+			os.Setenv("AWS_PROFILE", "nuvo-dev-access")
+			os.Setenv("AWS_SDK_LOAD_CONFIG", "1")
 
 			// Upload
 			err = c2s3.UploadToS3(s3Region, s3Bucket, filePath, buffer)
@@ -52,6 +64,8 @@ func NewRootCmd(args []string) *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
+
+			// Print
 			fmt.Println((string)(buffer))
 		},
 	}
