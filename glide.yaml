@@ -1,4 +1,4 @@
-package: c2s3
+package: carrier
 import:
 - package: github.com/aws/aws-sdk-go
   version: v1.15.16

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"c2s3/pkg/c2s3"
 	"fmt"
 	"log"
 	"os"
@@ -19,7 +18,7 @@ func main() {
 // NewRootCmd represents the base command when called without any subcommands
 func NewRootCmd(args []string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "c2s3",
+		Use:   "carrier",
 		Short: "",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
