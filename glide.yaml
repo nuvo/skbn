@@ -1,0 +1,10 @@
+package: c2s3
+import:
+- package: github.com/aws/aws-sdk-go
+  version: v1.15.16
+  subpackages:
+  - aws
+  - aws/session
+  - service/s3
+- package: github.com/spf13/cobra
+  version: v0.0.3
