@@ -180,13 +180,16 @@ func getRelativePaths(client interface{}, prefix, path string) ([]string, error)
 		awsProfile, awsSdkLoadConfig := toggleAWSVars("", "")
 		paths, err := GetListOfFilesFromK8s(*client.(*k8sClient), path)
 		_, _ = toggleAWSVars(awsProfile, awsSdkLoadConfig)
-
 		if err != nil {
 			return nil, err
 		}
 		relativePaths = paths
 	case "s3":
-		return nil, fmt.Errorf(prefix + " not implemented")
+		paths, err := GetListOfFilesFromS3(client.(*session.Session), path)
+		if err != nil {
+			return nil, err
+		}
+		relativePaths = paths
 	default:
 		return nil, fmt.Errorf(prefix + " not implemented")
 	}

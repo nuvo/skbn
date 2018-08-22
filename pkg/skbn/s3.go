@@ -2,6 +2,7 @@ package skbn
 
 import (
 	"bytes"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -22,6 +23,33 @@ func GetClientToS3() (*session.Session, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+func GetListOfFilesFromS3(s *session.Session, path string) ([]string, error) {
+	pSplit := strings.Split(path, "/")
+
+	if len(pSplit) < 2 {
+		return nil, fmt.Errorf("illegal path")
+	}
+
+	bucket := pSplit[0]
+	pathToCopy := filepath.Join(pSplit[1:]...)
+
+	objectOutput, err := s3.New(s).ListObjects(&s3.ListObjectsInput{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(pathToCopy),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var outLines []string
+	for _, content := range objectOutput.Contents {
+		line := *content.Key
+		outLines = append(outLines, strings.Replace(line, pathToCopy, "", 1))
+	}
+
+	return outLines, nil
 }
 
 // DownloadFromS3 downloads a single file from S3
