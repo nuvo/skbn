@@ -17,7 +17,31 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-func Exec(command, containerName, podName, namespace string, stdin io.Reader) (string, string, error) {
+func DownloadFromK8s(path string) ([]byte, error) {
+	pSplit := strings.Split(path, "/")
+
+	if len(pSplit) < 4 {
+		return nil, fmt.Errorf("illegal path")
+	}
+
+	namespace := pSplit[0]
+	podName := pSplit[1]
+	containerName := pSplit[2]
+	pathToCopy := pSplit[3]
+
+	output, stderr, err := execCat(namespace, podName, containerName, pathToCopy, nil)
+
+	if len(stderr) != 0 {
+		return output, fmt.Errorf("STDERR: " + (string)(stderr))
+	}
+	if err != nil {
+		return output, err
+	}
+
+	return output, nil
+}
+
+func execCat(namespace, podName, containerName, pathToCopy string, stdin io.Reader) ([]byte, []byte, error) {
 
 	clientset, config := getClientSetAndConfig()
 
@@ -28,8 +52,10 @@ func Exec(command, containerName, podName, namespace string, stdin io.Reader) (s
 		SubResource("exec")
 	scheme := runtime.NewScheme()
 	if err := core_v1.AddToScheme(scheme); err != nil {
-		return "", "", fmt.Errorf("error adding to scheme: %v", err)
+		return nil, nil, fmt.Errorf("error adding to scheme: %v", err)
 	}
+
+	command := "cat " + pathToCopy
 
 	parameterCodec := runtime.NewParameterCodec(scheme)
 	req.VersionedParams(&core_v1.PodExecOptions{
@@ -43,7 +69,7 @@ func Exec(command, containerName, podName, namespace string, stdin io.Reader) (s
 
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
-		return "", "", fmt.Errorf("error while creating Executor: %v", err)
+		return nil, nil, fmt.Errorf("error while creating Executor: %v", err)
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -54,10 +80,10 @@ func Exec(command, containerName, podName, namespace string, stdin io.Reader) (s
 		Tty:    false,
 	})
 	if err != nil {
-		return "", "", fmt.Errorf("error in Stream: %v", err)
+		return nil, nil, fmt.Errorf("error in Stream: %v", err)
 	}
 
-	return stdout.String(), stderr.String(), nil
+	return stdout.Bytes(), stderr.Bytes(), nil
 }
 
 func getClientSetAndConfig() (*kubernetes.Clientset, *rest.Config) {
