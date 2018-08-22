@@ -42,7 +42,6 @@ func TestImplementationsExist(srcPrefix, dstPrefix string) error {
 
 	switch dstPrefix {
 	case "k8s":
-		return fmt.Errorf("UploadToK8s not implemented")
 	case "s3":
 	default:
 		return fmt.Errorf("UploadTo" + strings.Title(dstPrefix) + " not implemented")
@@ -205,7 +204,6 @@ func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 		awsProfile, awsSdkLoadConfig := toggleAWSVars("", "")
 		bytes, err := DownloadFromK8s(*srcClient.(*k8sClient), srcPath)
 		_, _ = toggleAWSVars(awsProfile, awsSdkLoadConfig)
-
 		if err != nil {
 			return nil, err
 		}
@@ -226,9 +224,15 @@ func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 func upload(dstClient interface{}, dstPrefix, dstPath string, buffer []byte) error {
 	switch dstPrefix {
 	case "k8s":
-		return fmt.Errorf("UploadToK8s not implemented")
+		awsProfile, awsSdkLoadConfig := toggleAWSVars("", "")
+		err := UploadToK8s(*dstClient.(*k8sClient), dstPath, buffer)
+		_, _ = toggleAWSVars(awsProfile, awsSdkLoadConfig)
+		if err != nil {
+			return err
+		}
 	case "s3":
-		if err := UploadToS3(dstClient.(*session.Session), dstPath, buffer); err != nil {
+		err := UploadToS3(dstClient.(*session.Session), dstPath, buffer)
+		if err != nil {
 			return err
 		}
 	default:

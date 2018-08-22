@@ -104,6 +104,38 @@ func DownloadFromK8s(client k8sClient, path string) ([]byte, error) {
 	return output, nil
 }
 
+func UploadToK8s(client k8sClient, path string, buffer []byte) error {
+	pSplit := strings.Split(path, "/")
+
+	if len(pSplit) < 4 {
+		return fmt.Errorf("illegal path")
+	}
+
+	namespace := pSplit[0]
+	podName := pSplit[1]
+	containerName := pSplit[2]
+	pathToCopy := filepath.Join(pSplit[3:]...)
+
+	// TODO: mkdir
+
+	lines := strings.Split((string)(buffer), "\n")
+	for _, line := range lines {
+		command := "echo -n " + line + " >> /" + pathToCopy
+		command = "touch " + pathToCopy
+		_, stderr, err := exec(client, namespace, podName, containerName, command, nil)
+
+		if len(stderr) != 0 {
+			return fmt.Errorf("STDERR: " + (string)(stderr))
+		}
+		if err != nil {
+			fmt.Println("HERE!")
+			return err
+		}
+	}
+
+	return nil
+}
+
 func exec(client k8sClient, namespace, podName, containerName, command string, stdin io.Reader) ([]byte, []byte, error) {
 	clientset, config := client.clientSet, client.config
 
