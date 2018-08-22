@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"skbn/pkg/skbn"
-	"skbn/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -48,42 +47,8 @@ func NewCpCmd(out io.Writer) *cobra.Command {
 		Short: "Copy files or directories Kubernetes <--> S3 (and more?)",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-
-			srcPrefix, srcPath := utils.SplitInTwo(c.src, "://")
-			dstPrefix, dstPath := utils.SplitInTwo(c.dst, "://")
-
-			// CheckConnections
-
-			// Copy
-			var buffer []byte
-
-			if srcPrefix == "k8s" {
-				bytes, err := skbn.DownloadFromK8s(srcPath)
-				if err != nil {
-					log.Fatal(err)
-				}
-				buffer = bytes
-			}
-			if srcPrefix == "s3" {
-				bytes, err := skbn.DownloadFromS3(dstPath)
-				if err != nil {
-					log.Fatal(err)
-				}
-				buffer = bytes
-			}
-
-			if dstPrefix == "k8s" {
-				log.Fatal("Not yet implemented")
-			}
-			if dstPrefix == "s3" {
-				os.Setenv("AWS_PROFILE", "nuvo-dev-access")
-				os.Setenv("AWS_SDK_LOAD_CONFIG", "1")
-
-				// Upload
-				err := skbn.UploadToS3(dstPath, buffer)
-				if err != nil {
-					log.Fatal(err)
-				}
+			if err := skbn.Copy(c.src, c.dst); err != nil {
+				log.Fatal(err)
 			}
 		},
 	}

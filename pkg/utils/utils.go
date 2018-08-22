@@ -2,6 +2,7 @@ package utils
 
 import (
 	"log"
+	"os"
 	"strings"
 )
 
@@ -12,4 +13,12 @@ func SplitInTwo(s, sep string) (string, string) {
 	}
 	split := strings.Split(s, sep)
 	return split[0], split[1]
+}
+
+// ToggleEnvVar sets key to a new value and returns its old value
+func ToggleEnvVar(key, value string) string {
+	oldValue := os.Getenv(key)
+	os.Setenv(key, value)
+
+	return oldValue
 }

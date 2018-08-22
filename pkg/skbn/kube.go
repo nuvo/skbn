@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +16,36 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-func DownloadFromK8s(path string) ([]byte, error) {
+type k8sClient struct {
+	clientSet *kubernetes.Clientset
+	config    *rest.Config
+}
+
+func GetClientToK8s() (*k8sClient, error) {
+	var kubeconfig string
+	if kubeConfigPath := os.Getenv("KUBECONFIG"); kubeConfigPath != "" {
+		kubeconfig = kubeConfigPath // CI process
+	} else {
+		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config") // Development environment
+	}
+
+	// use the current context in kubeconfig
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// create the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	var client = &k8sClient{clientSet: clientset, config: config}
+	return client, nil
+}
+
+func GetListOfFilesFromK8s(client k8sClient, path string) ([]string, error) {
 	pSplit := strings.Split(path, "/")
 
 	if len(pSplit) < 4 {
@@ -27,9 +55,42 @@ func DownloadFromK8s(path string) ([]byte, error) {
 	namespace := pSplit[0]
 	podName := pSplit[1]
 	containerName := pSplit[2]
-	pathToCopy := pSplit[3]
+	pathToCopy := filepath.Join(pSplit[3:]...)
 
-	output, stderr, err := execCat(namespace, podName, containerName, pathToCopy, nil)
+	command := "find /" + pathToCopy + " -type f"
+
+	output, stderr, err := exec(client, namespace, podName, containerName, command, nil)
+
+	if len(stderr) != 0 {
+		return nil, fmt.Errorf("STDERR: " + (string)(stderr))
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split((string)(output), "\n")
+	var outLines []string
+	for _, line := range lines {
+		outLines = append(outLines, strings.Replace(line, "/"+pathToCopy, "", 1))
+	}
+
+	return outLines, nil
+}
+
+func DownloadFromK8s(client k8sClient, path string) ([]byte, error) {
+	pSplit := strings.Split(path, "/")
+
+	if len(pSplit) < 4 {
+		return nil, fmt.Errorf("illegal path")
+	}
+
+	namespace := pSplit[0]
+	podName := pSplit[1]
+	containerName := pSplit[2]
+	pathToCopy := filepath.Join(pSplit[3:]...)
+	command := "cat " + pathToCopy
+
+	output, stderr, err := exec(client, namespace, podName, containerName, command, nil)
 
 	if len(stderr) != 0 {
 		return output, fmt.Errorf("STDERR: " + (string)(stderr))
@@ -41,9 +102,8 @@ func DownloadFromK8s(path string) ([]byte, error) {
 	return output, nil
 }
 
-func execCat(namespace, podName, containerName, pathToCopy string, stdin io.Reader) ([]byte, []byte, error) {
-
-	clientset, config := getClientSetAndConfig()
+func exec(client k8sClient, namespace, podName, containerName, command string, stdin io.Reader) ([]byte, []byte, error) {
+	clientset, config := client.clientSet, client.config
 
 	req := clientset.Core().RESTClient().Post().
 		Resource("pods").
@@ -54,8 +114,6 @@ func execCat(namespace, podName, containerName, pathToCopy string, stdin io.Read
 	if err := core_v1.AddToScheme(scheme); err != nil {
 		return nil, nil, fmt.Errorf("error adding to scheme: %v", err)
 	}
-
-	command := "cat " + pathToCopy
 
 	parameterCodec := runtime.NewParameterCodec(scheme)
 	req.VersionedParams(&core_v1.PodExecOptions{
@@ -84,27 +142,4 @@ func execCat(namespace, podName, containerName, pathToCopy string, stdin io.Read
 	}
 
 	return stdout.Bytes(), stderr.Bytes(), nil
-}
-
-func getClientSetAndConfig() (*kubernetes.Clientset, *rest.Config) {
-	var kubeconfig string
-	if kubeConfigPath := os.Getenv("KUBECONFIG"); kubeConfigPath != "" {
-		kubeconfig = kubeConfigPath // CI process
-	} else {
-		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config") // Development environment
-	}
-
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	return clientset, config
 }
