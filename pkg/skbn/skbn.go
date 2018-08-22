@@ -116,14 +116,17 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 
 	// Execute in parallel
 	var wg sync.WaitGroup
+	totalLines := len(relativePaths)
+	currentLine := 0
 	for _, relativePath := range relativePaths {
 
-		if relativePath == "" {
-			continue
-		}
 		wg.Add(1)
+		currentLine++
 
-		go func(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath, relativePath string) error {
+		totalDigits := utils.CountDigits(totalLines)
+		currentLinePadded := utils.LeftPad2Len(currentLine, 0, totalDigits)
+
+		go func(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded string, totalLines int) error {
 			defer wg.Done()
 
 			fromPath := srcPath + relativePath
@@ -131,18 +134,18 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 			if err != nil {
 				return err
 			}
-			log.Println("src: " + fromPath)
+			log.Println(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalLines, fromPath))
 
 			toPath := dstPath + strings.Replace(relativePath, srcPath, "", 0)
 			err = upload(dstClient, dstPrefix, toPath, buffer)
 			if err != nil {
 				return err
 			}
-			log.Println("dst: " + toPath)
+			log.Println(fmt.Sprintf("file [%s/%d] dst: %s", currentLinePadded, totalLines, toPath))
 
 			return nil
 
-		}(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath, relativePath)
+		}(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded, totalLines)
 	}
 	wg.Wait()
 	return nil
@@ -178,13 +181,13 @@ func getRelativePaths(client interface{}, prefix, path string) ([]string, error)
 	return relativePaths, nil
 }
 
-func download(client interface{}, prefix, path string) ([]byte, error) {
+func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) {
 	var buffer []byte
 
-	switch prefix {
+	switch srcPrefix {
 	case "k8s":
 		awsProfile, awsSdkLoadConfig := toggleAWSVars("", "")
-		bytes, err := DownloadFromK8s(*client.(*k8sClient), path)
+		bytes, err := DownloadFromK8s(*srcClient.(*k8sClient), srcPath)
 		_, _ = toggleAWSVars(awsProfile, awsSdkLoadConfig)
 
 		if err != nil {
@@ -192,28 +195,28 @@ func download(client interface{}, prefix, path string) ([]byte, error) {
 		}
 		buffer = bytes
 	case "s3":
-		bytes, err := DownloadFromS3(client.(*session.Session), path)
+		bytes, err := DownloadFromS3(srcClient.(*session.Session), srcPath)
 		if err != nil {
 			return nil, err
 		}
 		buffer = bytes
 	default:
-		return nil, fmt.Errorf(prefix + " not implemented")
+		return nil, fmt.Errorf(srcPrefix + " not implemented")
 	}
 
 	return buffer, nil
 }
 
-func upload(client interface{}, prefix, path string, buffer []byte) error {
-	switch prefix {
+func upload(dstClient interface{}, dstPrefix, dstPath string, buffer []byte) error {
+	switch dstPrefix {
 	case "k8s":
 		return fmt.Errorf("UploadToK8s not implemented")
 	case "s3":
-		if err := UploadToS3(client.(*session.Session), path, buffer); err != nil {
+		if err := UploadToS3(dstClient.(*session.Session), dstPath, buffer); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf(prefix + " not implemented")
+		return fmt.Errorf(dstPrefix + " not implemented")
 	}
 	return nil
 }

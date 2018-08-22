@@ -3,6 +3,7 @@ package utils
 import (
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -21,4 +22,23 @@ func ToggleEnvVar(key, value string) string {
 	os.Setenv(key, value)
 
 	return oldValue
+}
+
+// CountDigits counts the digits of an integer
+func CountDigits(i int) (count int) {
+	for i != 0 {
+
+		i /= 10
+		count = count + 1
+	}
+	return count
+}
+
+// LeftPad2Len pads s with padStr to match overallLen
+func LeftPad2Len(num, padNum, overallLen int) string {
+	s := strconv.Itoa(num)
+	padStr := strconv.Itoa(padNum)
+	var padCountInt = 1 + ((overallLen - len(padStr)) / len(padStr))
+	var retStr = strings.Repeat(padStr, padCountInt) + s
+	return retStr[(len(retStr) - overallLen):]
 }

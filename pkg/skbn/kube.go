@@ -71,7 +71,9 @@ func GetListOfFilesFromK8s(client k8sClient, path string) ([]string, error) {
 	lines := strings.Split((string)(output), "\n")
 	var outLines []string
 	for _, line := range lines {
-		outLines = append(outLines, strings.Replace(line, "/"+pathToCopy, "", 1))
+		if line != "" {
+			outLines = append(outLines, strings.Replace(line, "/"+pathToCopy, "", 1))
+		}
 	}
 
 	return outLines, nil
