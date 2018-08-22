@@ -1,4 +1,4 @@
-package carrier
+package skbn
 
 import (
 	"bytes"

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"carrier/pkg/carrier"
 	"fmt"
 	"log"
 	"os"
+	"skbn/pkg/skbn"
 
 	"github.com/spf13/cobra"
 )
@@ -19,7 +19,7 @@ func main() {
 // NewRootCmd represents the base command when called without any subcommands
 func NewRootCmd(args []string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "carrier",
+		Use:   "skbn",
 		Short: "",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -29,7 +29,7 @@ func NewRootCmd(args []string) *cobra.Command {
 			containerName := "cassandra"
 			command := "cat docker-entrypoint.sh"
 
-			output, stderr, err := carrier.Exec(command, containerName, podName, namespace, nil)
+			output, stderr, err := skbn.Exec(command, containerName, podName, namespace, nil)
 
 			if len(stderr) != 0 {
 				fmt.Println("STDERR:", stderr)
@@ -44,7 +44,7 @@ func NewRootCmd(args []string) *cobra.Command {
 			return
 
 			s3Region := "eu-central-1"
-			s3Bucket := "nuvo-carrier-test"
+			s3Bucket := "nuvo-skbn-test"
 			filePath := "testfile"
 			buffer := []byte(`First line
 Second line
@@ -54,13 +54,13 @@ Third line`)
 			os.Setenv("AWS_SDK_LOAD_CONFIG", "1")
 
 			// Upload
-			err = carrier.UploadToS3(s3Region, s3Bucket, filePath, buffer)
+			err = skbn.UploadToS3(s3Region, s3Bucket, filePath, buffer)
 			if err != nil {
 				log.Fatal(err)
 			}
 
 			// Download
-			buffer, err = carrier.DownloadFromS3(s3Region, s3Bucket, filePath)
+			buffer, err = skbn.DownloadFromS3(s3Region, s3Bucket, filePath)
 			if err != nil {
 				log.Fatal(err)
 			}
