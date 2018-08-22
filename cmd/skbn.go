@@ -32,8 +32,9 @@ func NewRootCmd(args []string) *cobra.Command {
 }
 
 type cpCmd struct {
-	src string
-	dst string
+	src      string
+	dst      string
+	parallel int
 
 	out io.Writer
 }
@@ -47,7 +48,7 @@ func NewCpCmd(out io.Writer) *cobra.Command {
 		Short: "Copy files or directories Kubernetes <--> S3 (and more?)",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := skbn.Copy(c.src, c.dst); err != nil {
+			if err := skbn.Copy(c.src, c.dst, c.parallel); err != nil {
 				log.Fatal(err)
 			}
 		},
@@ -56,6 +57,7 @@ func NewCpCmd(out io.Writer) *cobra.Command {
 
 	f.StringVar(&c.src, "src", "", "path to copy from. Example: k8s://<namespace>/<podName>/<containerName>/path/to/copyfrom")
 	f.StringVar(&c.dst, "dst", "", "path to copy to. Example: s3://<bucketName>/path/to/copyto")
+	f.IntVar(&c.parallel, "parallel", 1, "number of files to copy in parallel. set this flag to 0 for full parallelism")
 
 	return cmd
 }

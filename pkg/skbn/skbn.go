@@ -3,15 +3,15 @@ package skbn
 import (
 	"fmt"
 	"log"
+	"math"
 	"skbn/pkg/utils"
 	"strings"
-	"sync"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 // Copy copies files from src to dst
-func Copy(src, dst string) error {
+func Copy(src, dst string, parallel int) error {
 	srcPrefix, srcPath := utils.SplitInTwo(src, "://")
 	dstPrefix, dstPath := utils.SplitInTwo(dst, "://")
 
@@ -23,7 +23,7 @@ func Copy(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	err = PerformCopy(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath)
+	err = PerformCopy(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath, parallel)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func GetClients(srcPrefix, dstPrefix string) (interface{}, interface{}, error) {
 }
 
 // PerformCopy performs the actual copy action
-func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath string) error {
+func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath string, parallel int) error {
 
 	relativePaths, err := getRelativePaths(srcClient, srcPrefix, srcPath)
 	if err != nil {
@@ -115,39 +115,52 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 	}
 
 	// Execute in parallel
-	var wg sync.WaitGroup
-	totalLines := len(relativePaths)
+	totalFiles := len(relativePaths)
+	if parallel == 0 {
+		parallel = totalFiles
+	}
+	bwgSize := int(math.Min(float64(parallel), float64(totalFiles))) // Very stingy :)
+	bwg := utils.NewBoundedWaitGroup(bwgSize)
+	var chans []chan error
+
+	i := 0
+	for i < bwgSize {
+		chans = append(chans, make(chan error))
+		i++
+	}
 	currentLine := 0
 	for _, relativePath := range relativePaths {
 
-		wg.Add(1)
+		bwg.Add(1)
 		currentLine++
 
-		totalDigits := utils.CountDigits(totalLines)
+		totalDigits := utils.CountDigits(totalFiles)
 		currentLinePadded := utils.LeftPad2Len(currentLine, 0, totalDigits)
 
-		go func(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded string, totalLines int) error {
-			defer wg.Done()
+		go func(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded string, totalFiles int) {
 
 			fromPath := srcPath + relativePath
 			buffer, err := download(srcClient, srcPrefix, fromPath)
 			if err != nil {
-				return err
+				log.Fatal(err)
+				bwg.Done()
+				return
 			}
-			log.Println(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalLines, fromPath))
+			log.Println(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalFiles, fromPath))
 
-			toPath := dstPath + strings.Replace(relativePath, srcPath, "", 0)
+			toPath := dstPath + relativePath
 			err = upload(dstClient, dstPrefix, toPath, buffer)
 			if err != nil {
-				return err
+				log.Fatal(err)
+				bwg.Done()
+				return
 			}
-			log.Println(fmt.Sprintf("file [%s/%d] dst: %s", currentLinePadded, totalLines, toPath))
+			log.Println(fmt.Sprintf("file [%s/%d] dst: %s", currentLinePadded, totalFiles, toPath))
 
-			return nil
-
-		}(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded, totalLines)
+			bwg.Done()
+		}(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded, totalFiles)
 	}
-	wg.Wait()
+	bwg.Wait()
 	return nil
 }
 
