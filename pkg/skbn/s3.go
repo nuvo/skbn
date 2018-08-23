@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -59,15 +60,34 @@ func DownloadFromS3(s *session.Session, path string) ([]byte, error) {
 	bucket := pSplit[0]
 	s3Path := filepath.Join(pSplit[1:]...)
 
-	objectOutput, err := s3.New(s).GetObject(&s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(s3Path),
-	})
+	attempts := 3
+	attempt := 0
+	for attempt < attempts {
+		attempt++
+		objectOutput, err := s3.New(s).GetObject(&s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(s3Path),
+		})
+		if err != nil {
+			if attempt == attempts {
+				return nil, err
+			}
+			continue
+		}
 
-	buffer := make([]byte, int(*objectOutput.ContentLength))
-	objectOutput.Body.Read(buffer)
+		buffer := make([]byte, int(*objectOutput.ContentLength))
+		_, err = objectOutput.Body.Read(buffer)
 
-	return buffer, err
+		if attempt == attempts && err != nil {
+			return nil, err
+		}
+		if err == nil {
+			return buffer, nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	return nil, nil
 }
 
 // UploadToS3 uploads a single file to S3
@@ -76,13 +96,26 @@ func UploadToS3(s *session.Session, path string, buffer []byte) error {
 	bucket := pSplit[0]
 	s3Path := filepath.Join(pSplit[1:]...)
 
-	_, err := s3.New(s).PutObject(&s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(s3Path),
-		Body:   bytes.NewReader(buffer),
-	})
+	attempts := 3
+	attempt := 0
+	for attempt < attempts {
+		attempt++
+		_, err := s3.New(s).PutObject(&s3.PutObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(s3Path),
+			Body:   bytes.NewReader(buffer),
+		})
 
-	return err
+		if attempt == attempts && err != nil {
+			return err
+		}
+		if err == nil {
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	return nil
 }
 
 func getNewSession() (*session.Session, error) {

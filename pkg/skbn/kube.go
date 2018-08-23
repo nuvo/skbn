@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -97,16 +98,25 @@ func DownloadFromK8s(client K8sClient, path string) ([]byte, error) {
 	pathToCopy := filepath.Join(pSplit[3:]...)
 	command := "cat " + pathToCopy
 
-	output, stderr, err := exec(client, namespace, podName, containerName, command, nil)
+	attempts := 3
+	attempt := 0
+	for attempt < attempts {
+		attempt++
+		output, stderr, err := exec(client, namespace, podName, containerName, command, nil)
 
-	if len(stderr) != 0 {
-		return output, fmt.Errorf("STDERR: " + (string)(stderr))
-	}
-	if err != nil {
-		return output, err
+		if attempt == attempts && len(stderr) != 0 {
+			return output, fmt.Errorf("STDERR: " + (string)(stderr))
+		}
+		if attempt == attempts && err != nil {
+			return output, err
+		}
+		if err == nil {
+			return output, nil
+		}
+		time.Sleep(1 * time.Second)
 	}
 
-	return output, nil
+	return nil, nil
 }
 
 // UploadToK8s uploads a single file to Kubernetes
