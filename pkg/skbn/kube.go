@@ -33,18 +33,27 @@ func GetClientToK8s() (*K8sClient, error) {
 		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config") // Development environment
 	}
 
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	var config *rest.Config
+
+	_, err := os.Stat(kubeconfig)
 	if err != nil {
-		return nil, err
+		// In cluster configuration
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Out of cluster configuration
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// create the clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-
 	var client = &K8sClient{clientSet: clientset, config: config}
 	return client, nil
 }
