@@ -2,9 +2,10 @@ package skbn
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"skbn/pkg/utils"
+
+	log "github.com/golang/glog"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 )
@@ -119,13 +120,6 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 	}
 	bwgSize := int(math.Min(float64(parallel), float64(totalFiles))) // Very stingy :)
 	bwg := utils.NewBoundedWaitGroup(bwgSize)
-	var chans []chan error
-
-	i := 0
-	for i < bwgSize {
-		chans = append(chans, make(chan error))
-		i++
-	}
 	currentLine := 0
 	for _, relativePath := range relativePaths {
 
@@ -136,24 +130,23 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 		currentLinePadded := utils.LeftPad2Len(currentLine, 0, totalDigits)
 
 		go func(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded string, totalFiles int) {
-
 			fromPath := srcPath + relativePath
 			buffer, err := download(srcClient, srcPrefix, fromPath)
 			if err != nil {
-				log.Fatal(err)
+				log.Error(err)
 				bwg.Done()
 				return
 			}
-			log.Println(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalFiles, fromPath))
+			log.Info(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalFiles, fromPath))
 
 			toPath := dstPath + relativePath
 			err = upload(dstClient, dstPrefix, toPath, buffer)
 			if err != nil {
-				log.Fatal(err)
+				log.Error(err)
 				bwg.Done()
 				return
 			}
-			log.Println(fmt.Sprintf("file [%s/%d] dst: %s", currentLinePadded, totalFiles, toPath))
+			log.Info(fmt.Sprintf("file [%s/%d] dst: %s", currentLinePadded, totalFiles, toPath))
 
 			bwg.Done()
 		}(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded, totalFiles)
