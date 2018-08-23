@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,12 +17,14 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-type k8sClient struct {
+// K8sClient holds a clientset and a config
+type K8sClient struct {
 	clientSet *kubernetes.Clientset
 	config    *rest.Config
 }
 
-func GetClientToK8s() (*k8sClient, error) {
+// GetClientToK8s returns a k8sClient
+func GetClientToK8s() (*K8sClient, error) {
 	var kubeconfig string
 	if kubeConfigPath := os.Getenv("KUBECONFIG"); kubeConfigPath != "" {
 		kubeconfig = kubeConfigPath // CI process
@@ -41,11 +44,12 @@ func GetClientToK8s() (*k8sClient, error) {
 		return nil, err
 	}
 
-	var client = &k8sClient{clientSet: clientset, config: config}
+	var client = &K8sClient{clientSet: clientset, config: config}
 	return client, nil
 }
 
-func GetListOfFilesFromK8s(client k8sClient, path string) ([]string, error) {
+// GetListOfFilesFromK8s gets list of files in path from Kubernetes (recursive)
+func GetListOfFilesFromK8s(client K8sClient, path string) ([]string, error) {
 	pSplit := strings.Split(path, "/")
 
 	if len(pSplit) < 4 {
@@ -79,7 +83,8 @@ func GetListOfFilesFromK8s(client k8sClient, path string) ([]string, error) {
 	return outLines, nil
 }
 
-func DownloadFromK8s(client k8sClient, path string) ([]byte, error) {
+// DownloadFromK8s downloads a single file from Kubernetes
+func DownloadFromK8s(client K8sClient, path string) ([]byte, error) {
 	pSplit := strings.Split(path, "/")
 
 	if len(pSplit) < 4 {
@@ -104,7 +109,8 @@ func DownloadFromK8s(client k8sClient, path string) ([]byte, error) {
 	return output, nil
 }
 
-func UploadToK8s(client k8sClient, path string, buffer []byte) error {
+// UploadToK8s uploads a single file to Kubernetes
+func UploadToK8s(client K8sClient, path string, buffer []byte) error {
 	pSplit := strings.Split(path, "/")
 
 	if len(pSplit) < 4 {
@@ -118,25 +124,26 @@ func UploadToK8s(client k8sClient, path string, buffer []byte) error {
 
 	// TODO: mkdir
 
-	lines := strings.Split((string)(buffer), "\n")
-	for _, line := range lines {
-		command := "echo -n " + line + " >> /" + pathToCopy
-		command = "touch " + pathToCopy
-		_, stderr, err := exec(client, namespace, podName, containerName, command, nil)
+	// lines := strings.Split((string)(buffer), "\n")
+	// for _, line := range lines {
+	err := ioutil.WriteFile("/tmp/dat1", buffer, 0644)
 
-		if len(stderr) != 0 {
-			return fmt.Errorf("STDERR: " + (string)(stderr))
-		}
-		if err != nil {
-			fmt.Println("HERE!")
-			return err
-		}
+	command := "sh -c \"dd of=/tmp/" + pathToCopy + " < /tmp/dat1\""
+	fmt.Println(command)
+	_, stderr, err := exec(client, namespace, podName, containerName, command, nil)
+
+	if len(stderr) != 0 {
+		return fmt.Errorf("STDERR: " + (string)(stderr))
 	}
+	if err != nil {
+		return err
+	}
+	// }
 
 	return nil
 }
 
-func exec(client k8sClient, namespace, podName, containerName, command string, stdin io.Reader) ([]byte, []byte, error) {
+func exec(client K8sClient, namespace, podName, containerName, command string, stdin io.Reader) ([]byte, []byte, error) {
 	clientset, config := client.clientSet, client.config
 
 	req := clientset.Core().RESTClient().Post().

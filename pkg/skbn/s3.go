@@ -25,6 +25,7 @@ func GetClientToS3() (*session.Session, error) {
 	return s, nil
 }
 
+// GetListOfFilesFromS3 gets list of files in path from S3 (recursive)
 func GetListOfFilesFromS3(s *session.Session, path string) ([]string, error) {
 	pSplit := strings.Split(path, "/")
 

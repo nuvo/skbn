@@ -7,13 +7,11 @@ import (
 	"strings"
 )
 
-// SplitInTwo splits a string to two parts by a delimeter
-func SplitInTwo(s, sep string) (string, string) {
-	if !strings.Contains(s, sep) {
-		log.Fatal(s, "does not contain", sep)
-	}
-	split := strings.Split(s, sep)
-	return split[0], split[1]
+// toggleAWSVars handles the use of heptio-authenticator-aws alongside kubectl
+func toggleAWSVars(awsProfile, awsSdkLoadConfig string) string {
+	oldAWSProfile := ToggleEnvVar("AWS_PROFILE", awsProfile)
+
+	return oldAWSProfile
 }
 
 // ToggleEnvVar sets key to a new value and returns its old value
@@ -22,6 +20,15 @@ func ToggleEnvVar(key, value string) string {
 	os.Setenv(key, value)
 
 	return oldValue
+}
+
+// SplitInTwo splits a string to two parts by a delimeter
+func SplitInTwo(s, sep string) (string, string) {
+	if !strings.Contains(s, sep) {
+		log.Fatal(s, "does not contain", sep)
+	}
+	split := strings.Split(s, sep)
+	return split[0], split[1]
 }
 
 // CountDigits counts the digits of an integer

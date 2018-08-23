@@ -5,7 +5,6 @@ import (
 	"log"
 	"math"
 	"skbn/pkg/utils"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 )
@@ -37,14 +36,14 @@ func TestImplementationsExist(srcPrefix, dstPrefix string) error {
 	case "k8s":
 	case "s3":
 	default:
-		return fmt.Errorf("DownloadFrom" + strings.Title(srcPrefix) + " not implemented")
+		return fmt.Errorf(srcPrefix + " not implemented")
 	}
 
 	switch dstPrefix {
 	case "k8s":
 	case "s3":
 	default:
-		return fmt.Errorf("UploadTo" + strings.Title(dstPrefix) + " not implemented")
+		return fmt.Errorf(dstPrefix + " not implemented")
 	}
 
 	return nil
@@ -163,22 +162,12 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 	return nil
 }
 
-// toggleAWSVars handles the use of heptio-authenticator-aws alongside kubectl
-func toggleAWSVars(awsProfile, awsSdkLoadConfig string) (string, string) {
-	oldAWSProfile := utils.ToggleEnvVar("AWS_PROFILE", awsProfile)
-	oldAWSSdkLoadConfig := utils.ToggleEnvVar("AWS_SDK_LOAD_CONFIG", awsSdkLoadConfig)
-
-	return oldAWSProfile, oldAWSSdkLoadConfig
-}
-
 func getRelativePaths(client interface{}, prefix, path string) ([]string, error) {
 	var relativePaths []string
 
 	switch prefix {
 	case "k8s":
-		awsProfile, awsSdkLoadConfig := toggleAWSVars("", "")
-		paths, err := GetListOfFilesFromK8s(*client.(*k8sClient), path)
-		_, _ = toggleAWSVars(awsProfile, awsSdkLoadConfig)
+		paths, err := GetListOfFilesFromK8s(*client.(*K8sClient), path)
 		if err != nil {
 			return nil, err
 		}
@@ -201,9 +190,7 @@ func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 
 	switch srcPrefix {
 	case "k8s":
-		awsProfile, awsSdkLoadConfig := toggleAWSVars("", "")
-		bytes, err := DownloadFromK8s(*srcClient.(*k8sClient), srcPath)
-		_, _ = toggleAWSVars(awsProfile, awsSdkLoadConfig)
+		bytes, err := DownloadFromK8s(*srcClient.(*K8sClient), srcPath)
 		if err != nil {
 			return nil, err
 		}
@@ -224,9 +211,7 @@ func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 func upload(dstClient interface{}, dstPrefix, dstPath string, buffer []byte) error {
 	switch dstPrefix {
 	case "k8s":
-		awsProfile, awsSdkLoadConfig := toggleAWSVars("", "")
-		err := UploadToK8s(*dstClient.(*k8sClient), dstPath, buffer)
-		_, _ = toggleAWSVars(awsProfile, awsSdkLoadConfig)
+		err := UploadToK8s(*dstClient.(*K8sClient), dstPath, buffer)
 		if err != nil {
 			return err
 		}
