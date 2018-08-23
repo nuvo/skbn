@@ -14,44 +14,71 @@ import (
 
 // GetClientToS3 checks the connection to S3 and returns the tested client
 func GetClientToS3() (*session.Session, error) {
-	s, err := getNewSession()
-	if err != nil {
-		return nil, err
+	attempts := 3
+	attempt := 0
+	for attempt < attempts {
+		attempt++
+
+		s, err := getNewSession()
+		if err != nil {
+			if attempt == attempts {
+				return nil, err
+			}
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		_, err = s3.New(s).ListBuckets(&s3.ListBucketsInput{})
+		if attempt == attempts {
+			if err != nil {
+				return nil, err
+			}
+		}
+		if err == nil {
+			return s, nil
+		}
+		time.Sleep(1 * time.Second)
 	}
 
-	_, err = s3.New(s).ListBuckets(&s3.ListBucketsInput{})
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
+	return nil, nil
 }
 
 // GetListOfFilesFromS3 gets list of files in path from S3 (recursive)
 func GetListOfFilesFromS3(s *session.Session, path string) ([]string, error) {
 	pSplit := strings.Split(path, "/")
-
 	if len(pSplit) < 2 {
 		return nil, fmt.Errorf("illegal path")
 	}
-
 	bucket := pSplit[0]
 	pathToCopy := filepath.Join(pSplit[1:]...)
 
-	objectOutput, err := s3.New(s).ListObjects(&s3.ListObjectsInput{
-		Bucket: aws.String(bucket),
-		Prefix: aws.String(pathToCopy),
-	})
-	if err != nil {
-		return nil, err
+	attempts := 3
+	attempt := 0
+	for attempt < attempts {
+		attempt++
+
+		objectOutput, err := s3.New(s).ListObjects(&s3.ListObjectsInput{
+			Bucket: aws.String(bucket),
+			Prefix: aws.String(pathToCopy),
+		})
+		if err != nil {
+			if attempt == attempts {
+				return nil, err
+			}
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		var outLines []string
+		for _, content := range objectOutput.Contents {
+			line := *content.Key
+			outLines = append(outLines, strings.Replace(line, pathToCopy, "", 1))
+		}
+
+		return outLines, nil
 	}
 
-	var outLines []string
-	for _, content := range objectOutput.Contents {
-		line := *content.Key
-		outLines = append(outLines, strings.Replace(line, pathToCopy, "", 1))
-	}
-
-	return outLines, nil
+	return nil, nil
 }
 
 // DownloadFromS3 downloads a single file from S3
@@ -64,6 +91,7 @@ func DownloadFromS3(s *session.Session, path string) ([]byte, error) {
 	attempt := 0
 	for attempt < attempts {
 		attempt++
+
 		objectOutput, err := s3.New(s).GetObject(&s3.GetObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(s3Path),
@@ -72,14 +100,16 @@ func DownloadFromS3(s *session.Session, path string) ([]byte, error) {
 			if attempt == attempts {
 				return nil, err
 			}
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
 		buffer := make([]byte, int(*objectOutput.ContentLength))
 		_, err = objectOutput.Body.Read(buffer)
-
-		if attempt == attempts && err != nil {
-			return nil, err
+		if attempt == attempts {
+			if err != nil {
+				return nil, err
+			}
 		}
 		if err == nil {
 			return buffer, nil
@@ -100,14 +130,16 @@ func UploadToS3(s *session.Session, path string, buffer []byte) error {
 	attempt := 0
 	for attempt < attempts {
 		attempt++
+
 		_, err := s3.New(s).PutObject(&s3.PutObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(s3Path),
 			Body:   bytes.NewReader(buffer),
 		})
-
-		if attempt == attempts && err != nil {
-			return err
+		if attempt == attempts {
+			if err != nil {
+				return err
+			}
 		}
 		if err == nil {
 			return nil
