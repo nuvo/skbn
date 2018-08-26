@@ -3,6 +3,7 @@ package skbn
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"path/filepath"
 	"skbn/pkg/utils"
 	"strings"
@@ -160,9 +161,8 @@ func validateS3Path(pathSplit []string) error {
 }
 
 func getNewSession() (*session.Session, error) {
-	region := "eu-central-1"
 	s, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
+		Region: aws.String(os.Getenv("AWS_REGION")),
 	})
 
 	return s, err

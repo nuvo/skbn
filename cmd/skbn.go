@@ -59,5 +59,8 @@ func NewCpCmd(out io.Writer) *cobra.Command {
 	f.StringVar(&c.dst, "dst", "", "path to copy to. Example: s3://<bucketName>/path/to/copyto")
 	f.IntVar(&c.parallel, "parallel", 1, "number of files to copy in parallel. set this flag to 0 for full parallelism")
 
+	cmd.MarkFlagRequired("src")
+	cmd.MarkFlagRequired("dst")
+
 	return cmd
 }
