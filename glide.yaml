@@ -1,0 +1,28 @@
+package: skbn
+ignore:
+- skbn/pkg/skbn
+- skbn/pkg/utils
+import:
+- package: github.com/aws/aws-sdk-go
+  version: v1.15.16
+  subpackages:
+  - aws
+  - aws/session
+  - service/s3
+- package: github.com/spf13/cobra
+  version: v0.0.3
+- package: k8s.io/api
+  version: kubernetes-1.11.2
+  subpackages:
+  - core/v1
+- package: k8s.io/apimachinery
+  version: kubernetes-1.11.2
+  subpackages:
+  - pkg/apis/meta/v1
+- package: k8s.io/client-go
+  version: kubernetes-1.11.2
+  subpackages:
+  - kubernetes
+  - rest
+  - tools/clientcmd
+
