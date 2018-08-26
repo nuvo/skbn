@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"skbn/pkg/utils"
 	"strings"
-	"time"
 
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -79,14 +79,14 @@ func GetListOfFilesFromK8s(client K8sClient, path string) ([]string, error) {
 			if attempt == attempts {
 				return nil, fmt.Errorf("STDERR: " + (string)(stderr))
 			}
-			time.Sleep(1 * time.Second)
+			utils.Sleep(attempt)
 			continue
 		}
 		if err != nil {
 			if attempt == attempts {
 				return nil, err
 			}
-			time.Sleep(1 * time.Second)
+			utils.Sleep(attempt)
 			continue
 		}
 
@@ -133,7 +133,7 @@ func DownloadFromK8s(client K8sClient, path string) ([]byte, error) {
 		if err == nil {
 			return output, nil
 		}
-		time.Sleep(1 * time.Second)
+		utils.Sleep(attempt)
 	}
 
 	return nil, nil
@@ -166,14 +166,14 @@ func UploadToK8s(client K8sClient, toPath, fromPath string, buffer []byte) error
 			if attempt == attempts {
 				return fmt.Errorf("STDERR: " + (string)(stderr))
 			}
-			time.Sleep(1 * time.Second)
+			utils.Sleep(attempt)
 			continue
 		}
 		if err != nil {
 			if attempt == attempts {
 				return err
 			}
-			time.Sleep(1 * time.Second)
+			utils.Sleep(attempt)
 			continue
 		}
 
@@ -185,14 +185,14 @@ func UploadToK8s(client K8sClient, toPath, fromPath string, buffer []byte) error
 			if attempt == attempts {
 				return fmt.Errorf("STDERR: " + (string)(stderr))
 			}
-			time.Sleep(1 * time.Second)
+			utils.Sleep(attempt)
 			continue
 		}
 		if err != nil {
 			if attempt == attempts {
 				return err
 			}
-			time.Sleep(1 * time.Second)
+			utils.Sleep(attempt)
 			continue
 		}
 	}

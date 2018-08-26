@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"skbn/pkg/utils"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -24,7 +24,7 @@ func GetClientToS3() (*session.Session, error) {
 			if attempt == attempts {
 				return nil, err
 			}
-			time.Sleep(1 * time.Second)
+			utils.Sleep(attempt)
 			continue
 		}
 
@@ -37,7 +37,7 @@ func GetClientToS3() (*session.Session, error) {
 		if err == nil {
 			return s, nil
 		}
-		time.Sleep(1 * time.Second)
+		utils.Sleep(attempt)
 	}
 
 	return nil, nil
@@ -65,7 +65,7 @@ func GetListOfFilesFromS3(s *session.Session, path string) ([]string, error) {
 			if attempt == attempts {
 				return nil, err
 			}
-			time.Sleep(1 * time.Second)
+			utils.Sleep(attempt)
 			continue
 		}
 
@@ -103,7 +103,7 @@ func DownloadFromS3(s *session.Session, path string) ([]byte, error) {
 			if attempt == attempts {
 				return nil, err
 			}
-			time.Sleep(1 * time.Second)
+			utils.Sleep(attempt)
 			continue
 		}
 
@@ -146,7 +146,7 @@ func UploadToS3(s *session.Session, toPath, fromPath string, buffer []byte) erro
 		if err == nil {
 			return nil
 		}
-		time.Sleep(1 * time.Second)
+		utils.Sleep(attempt)
 	}
 
 	return nil

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // toggleAWSVars handles the use of heptio-authenticator-aws alongside kubectl
@@ -48,4 +49,9 @@ func LeftPad2Len(num, padNum, overallLen int) string {
 	var padCountInt = 1 + ((overallLen - len(padStr)) / len(padStr))
 	var retStr = strings.Repeat(padStr, padCountInt) + s
 	return retStr[(len(retStr) - overallLen):]
+}
+
+// Sleep sleeps for an input number of seconds
+func Sleep(seconds int) {
+	time.Sleep(time.Duration(seconds) * time.Second)
 }
