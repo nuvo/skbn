@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,14 +60,14 @@ func GetClientToK8s() (*K8sClient, error) {
 // GetListOfFilesFromK8s gets list of files in path from Kubernetes (recursive)
 func GetListOfFilesFromK8s(client K8sClient, path string) ([]string, error) {
 	pSplit := strings.Split(path, "/")
-	if len(pSplit) < 4 {
-		return nil, fmt.Errorf("illegal path")
+	if err := validateK8sPath(pSplit); err != nil {
+		return nil, err
 	}
 	namespace := pSplit[0]
 	podName := pSplit[1]
 	containerName := pSplit[2]
-	pathToCopy := filepath.Join(pSplit[3:]...)
-	command := "find /" + pathToCopy + " -type f"
+	pathToCopy := getAbsPath(pSplit[3:]...)
+	command := "find " + pathToCopy + " -type f"
 
 	attempts := 3
 	attempt := 0
@@ -95,7 +94,7 @@ func GetListOfFilesFromK8s(client K8sClient, path string) ([]string, error) {
 		var outLines []string
 		for _, line := range lines {
 			if line != "" {
-				outLines = append(outLines, strings.Replace(line, "/"+pathToCopy, "", 1))
+				outLines = append(outLines, strings.Replace(line, pathToCopy, "", 1))
 			}
 		}
 
@@ -108,13 +107,13 @@ func GetListOfFilesFromK8s(client K8sClient, path string) ([]string, error) {
 // DownloadFromK8s downloads a single file from Kubernetes
 func DownloadFromK8s(client K8sClient, path string) ([]byte, error) {
 	pSplit := strings.Split(path, "/")
-	if len(pSplit) < 4 {
-		return nil, fmt.Errorf("illegal path")
+	if err := validateK8sPath(pSplit); err != nil {
+		return nil, err
 	}
 	namespace := pSplit[0]
 	podName := pSplit[1]
 	containerName := pSplit[2]
-	pathToCopy := filepath.Join(pSplit[3:]...)
+	pathToCopy := getAbsPath(pSplit[3:]...)
 	command := "cat " + pathToCopy
 
 	attempts := 3
@@ -141,35 +140,71 @@ func DownloadFromK8s(client K8sClient, path string) ([]byte, error) {
 }
 
 // UploadToK8s uploads a single file to Kubernetes
-func UploadToK8s(client K8sClient, path string, buffer []byte) error {
-	pSplit := strings.Split(path, "/")
-	if len(pSplit) < 4 {
-		return fmt.Errorf("illegal path")
+func UploadToK8s(client K8sClient, toPath, fromPath string, buffer []byte) error {
+	pSplit := strings.Split(toPath, "/")
+	if err := validateK8sPath(pSplit); err != nil {
+		return err
+	}
+	if len(pSplit) == 3 {
+		_, fileName := filepath.Split(fromPath)
+		pSplit = append(pSplit, fileName)
 	}
 	namespace := pSplit[0]
 	podName := pSplit[1]
 	containerName := pSplit[2]
-	pathToCopy := filepath.Join(pSplit[3:]...)
+	pathToCopy := getAbsPath(pSplit[3:]...)
 
-	// TODO: mkdir
+	attempts := 3
+	attempt := 0
+	for attempt < attempts {
+		attempt++
+		dir, _ := filepath.Split(pathToCopy)
+		command := "mkdir -p " + dir
+		_, stderr, err := exec(client, namespace, podName, containerName, command, nil)
 
-	// lines := strings.Split((string)(buffer), "\n")
-	// for _, line := range lines {
-	err := ioutil.WriteFile("/tmp/dat1", buffer, 0644)
+		if len(stderr) != 0 {
+			if attempt == attempts {
+				return fmt.Errorf("STDERR: " + (string)(stderr))
+			}
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if err != nil {
+			if attempt == attempts {
+				return err
+			}
+			time.Sleep(1 * time.Second)
+			continue
+		}
 
-	command := "sh -c \"dd of=/tmp/" + pathToCopy + " < /tmp/dat1\""
-	fmt.Println(command)
-	_, stderr, err := exec(client, namespace, podName, containerName, command, nil)
+		command = "cp /dev/stdin " + pathToCopy
+		stdin := bytes.NewReader(buffer)
+		_, stderr, err = exec(client, namespace, podName, containerName, command, stdin)
 
-	if len(stderr) != 0 {
-		return fmt.Errorf("STDERR: " + (string)(stderr))
+		if len(stderr) != 0 {
+			if attempt == attempts {
+				return fmt.Errorf("STDERR: " + (string)(stderr))
+			}
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if err != nil {
+			if attempt == attempts {
+				return err
+			}
+			time.Sleep(1 * time.Second)
+			continue
+		}
 	}
-	if err != nil {
-		return err
-	}
-	// }
 
 	return nil
+}
+
+func validateK8sPath(pathSplit []string) error {
+	if len(pathSplit) >= 3 {
+		return nil
+	}
+	return fmt.Errorf("illegal path: %s", filepath.Join(pathSplit...))
 }
 
 func exec(client K8sClient, namespace, podName, containerName, command string, stdin io.Reader) ([]byte, []byte, error) {
@@ -212,4 +247,8 @@ func exec(client K8sClient, namespace, podName, containerName, command string, s
 	}
 
 	return stdout.Bytes(), stderr.Bytes(), nil
+}
+
+func getAbsPath(path ...string) string {
+	return filepath.Join("/", filepath.Join(path...))
 }

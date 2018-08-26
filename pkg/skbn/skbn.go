@@ -3,9 +3,10 @@ package skbn
 import (
 	"fmt"
 	"math"
+	"path/filepath"
 	"skbn/pkg/utils"
 
-	log "github.com/golang/glog"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 )
@@ -130,23 +131,23 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 		currentLinePadded := utils.LeftPad2Len(currentLine, 0, totalDigits)
 
 		go func(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded string, totalFiles int) {
-			fromPath := srcPath + relativePath
+			fromPath := filepath.Join(srcPath, relativePath)
 			buffer, err := download(srcClient, srcPrefix, fromPath)
 			if err != nil {
-				log.Error(err)
+				log.Fatal(err)
 				bwg.Done()
 				return
 			}
-			log.Info(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalFiles, fromPath))
+			log.Println(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalFiles, fromPath))
 
-			toPath := dstPath + relativePath
-			err = upload(dstClient, dstPrefix, toPath, buffer)
+			toPath := filepath.Join(dstPath, relativePath)
+			err = upload(dstClient, dstPrefix, toPath, fromPath, buffer)
 			if err != nil {
-				log.Error(err)
+				log.Fatal(err)
 				bwg.Done()
 				return
 			}
-			log.Info(fmt.Sprintf("file [%s/%d] dst: %s", currentLinePadded, totalFiles, toPath))
+			log.Println(fmt.Sprintf("file [%s/%d] dst: %s", currentLinePadded, totalFiles, toPath))
 
 			bwg.Done()
 		}(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded, totalFiles)
@@ -201,15 +202,15 @@ func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 	return buffer, nil
 }
 
-func upload(dstClient interface{}, dstPrefix, dstPath string, buffer []byte) error {
+func upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, buffer []byte) error {
 	switch dstPrefix {
 	case "k8s":
-		err := UploadToK8s(*dstClient.(*K8sClient), dstPath, buffer)
+		err := UploadToK8s(*dstClient.(*K8sClient), dstPath, srcPath, buffer)
 		if err != nil {
 			return err
 		}
 	case "s3":
-		err := UploadToS3(dstClient.(*session.Session), dstPath, buffer)
+		err := UploadToS3(dstClient.(*session.Session), dstPath, srcPath, buffer)
 		if err != nil {
 			return err
 		}

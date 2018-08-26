@@ -46,8 +46,8 @@ func GetClientToS3() (*session.Session, error) {
 // GetListOfFilesFromS3 gets list of files in path from S3 (recursive)
 func GetListOfFilesFromS3(s *session.Session, path string) ([]string, error) {
 	pSplit := strings.Split(path, "/")
-	if len(pSplit) < 2 {
-		return nil, fmt.Errorf("illegal path")
+	if err := validateS3Path(pSplit); err != nil {
+		return nil, err
 	}
 	bucket := pSplit[0]
 	pathToCopy := filepath.Join(pSplit[1:]...)
@@ -84,6 +84,9 @@ func GetListOfFilesFromS3(s *session.Session, path string) ([]string, error) {
 // DownloadFromS3 downloads a single file from S3
 func DownloadFromS3(s *session.Session, path string) ([]byte, error) {
 	pSplit := strings.Split(path, "/")
+	if err := validateS3Path(pSplit); err != nil {
+		return nil, err
+	}
 	bucket := pSplit[0]
 	s3Path := filepath.Join(pSplit[1:]...)
 
@@ -105,24 +108,23 @@ func DownloadFromS3(s *session.Session, path string) ([]byte, error) {
 		}
 
 		buffer := make([]byte, int(*objectOutput.ContentLength))
-		_, err = objectOutput.Body.Read(buffer)
-		if attempt == attempts {
-			if err != nil {
-				return nil, err
-			}
-		}
-		if err == nil {
-			return buffer, nil
-		}
-		time.Sleep(1 * time.Second)
+		objectOutput.Body.Read(buffer)
+		return buffer, nil
 	}
 
 	return nil, nil
 }
 
 // UploadToS3 uploads a single file to S3
-func UploadToS3(s *session.Session, path string, buffer []byte) error {
-	pSplit := strings.Split(path, "/")
+func UploadToS3(s *session.Session, toPath, fromPath string, buffer []byte) error {
+	pSplit := strings.Split(toPath, "/")
+	if err := validateS3Path(pSplit); err != nil {
+		return err
+	}
+	if len(pSplit) == 1 {
+		_, fileName := filepath.Split(fromPath)
+		pSplit = append(pSplit, fileName)
+	}
 	bucket := pSplit[0]
 	s3Path := filepath.Join(pSplit[1:]...)
 
@@ -150,9 +152,18 @@ func UploadToS3(s *session.Session, path string, buffer []byte) error {
 	return nil
 }
 
+func validateS3Path(pathSplit []string) error {
+	if len(pathSplit) >= 1 {
+		return nil
+	}
+	return fmt.Errorf("illegal path: %s", filepath.Join(pathSplit...))
+}
+
 func getNewSession() (*session.Session, error) {
-	region := "eu-central-1" // Not really important for S3
-	s, err := session.NewSession(&aws.Config{Region: aws.String(region)})
+	region := "eu-central-1"
+	s, err := session.NewSession(&aws.Config{
+		Region: aws.String(region),
+	})
 
 	return s, err
 }
