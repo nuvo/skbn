@@ -1,3 +1,10 @@
 **/*gitlab*
 *.md
 *.git
+*.yml
+*.yaml
+*.lock
+cmd/
+pkg/
+vendor/
+
