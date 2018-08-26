@@ -15,7 +15,7 @@ build_code:
   - cd $GOPATH/src
   - ln -s $CI_PROJECT_DIR
   - cd $CI_PROJECT_NAME
-  - glide up -v
+  - glide up
   script:
   - for f in $(find test -type f -name "*.go"); do go test -v $f; done
   - go build -o skbn cmd/skbn.go
