@@ -1,4 +1,7 @@
 package: skbn
+ignore:
+- skbn/pkg/skbn
+- skbn/pkg/utils
 import:
 - package: github.com/aws/aws-sdk-go
   version: v1.15.16
