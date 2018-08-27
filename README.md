@@ -43,4 +43,4 @@ Skbn uses the default AWS [credentials chain](https://docs.aws.amazon.com/sdk-fo
 
 ## Examples
 
-1. In-cluster example
+1. [In-cluster example](https://github.com/maorfr/skbn/tree/master/examples/in-cluster)
