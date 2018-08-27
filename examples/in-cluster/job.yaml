@@ -10,20 +10,20 @@ spec:
       labels:
         app: skbn
       annotations:
-        iam.amazonaws.com/role: dbbackup-operator
+        iam.amazonaws.com/role: skbn # We are using kube2iam
     spec:
       restartPolicy: OnFailure
       serviceAccountName: skbn
       containers:
       - name: skbn
-        image: registry.dev.nvsrc.com/ce/utilities/skbn:7469
+        image: maorfr/skbn
         command: ["skbn"]
         args:
         - cp
         - --src
-        - k8s://vnext/example-chart-649644f5b4-lzmc4/example-chart/tmp/
+        - k8s://namespace/pod/container/path/to/copy/from
         - --dst
-        - s3://nuvo-dev-dbbackup-test/skbn/
+        - s3://bucket/path/to/copy/to
         imagePullPolicy: IfNotPresent
         env:
         - name: AWS_REGION
