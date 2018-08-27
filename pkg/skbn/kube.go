@@ -74,7 +74,7 @@ func GetListOfFilesFromK8s(client K8sClient, path string) ([]string, error) {
 	for attempt < attempts {
 		attempt++
 
-		output, stderr, err := exec(client, namespace, podName, containerName, command, nil)
+		output, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
 		if len(stderr) != 0 {
 			if attempt == attempts {
 				return nil, fmt.Errorf("STDERR: " + (string)(stderr))
@@ -121,7 +121,7 @@ func DownloadFromK8s(client K8sClient, path string) ([]byte, error) {
 	for attempt < attempts {
 		attempt++
 
-		output, stderr, err := exec(client, namespace, podName, containerName, command, nil)
+		output, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
 		if attempt == attempts {
 			if len(stderr) != 0 {
 				return output, fmt.Errorf("STDERR: " + (string)(stderr))
@@ -160,7 +160,7 @@ func UploadToK8s(client K8sClient, toPath, fromPath string, buffer []byte) error
 		attempt++
 		dir, _ := filepath.Split(pathToCopy)
 		command := "mkdir -p " + dir
-		_, stderr, err := exec(client, namespace, podName, containerName, command, nil)
+		_, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
 
 		if len(stderr) != 0 {
 			if attempt == attempts {
@@ -179,7 +179,7 @@ func UploadToK8s(client K8sClient, toPath, fromPath string, buffer []byte) error
 
 		command = "cp /dev/stdin " + pathToCopy
 		stdin := bytes.NewReader(buffer)
-		_, stderr, err = exec(client, namespace, podName, containerName, command, stdin)
+		_, stderr, err = Exec(client, namespace, podName, containerName, command, stdin)
 
 		if len(stderr) != 0 {
 			if attempt == attempts {
@@ -207,7 +207,8 @@ func validateK8sPath(pathSplit []string) error {
 	return fmt.Errorf("illegal path: %s", filepath.Join(pathSplit...))
 }
 
-func exec(client K8sClient, namespace, podName, containerName, command string, stdin io.Reader) ([]byte, []byte, error) {
+// Exec executes a command in a given container
+func Exec(client K8sClient, namespace, podName, containerName, command string, stdin io.Reader) ([]byte, []byte, error) {
 	clientset, config := client.clientSet, client.config
 
 	req := clientset.Core().RESTClient().Post().
