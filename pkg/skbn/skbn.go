@@ -161,7 +161,7 @@ func getRelativePaths(client interface{}, prefix, path string) ([]string, error)
 
 	switch prefix {
 	case "k8s":
-		paths, err := GetListOfFilesFromK8s(*client.(*K8sClient), path)
+		paths, err := GetListOfFilesFromK8s(*client.(*K8sClient), path, "f", "")
 		if err != nil {
 			return nil, err
 		}

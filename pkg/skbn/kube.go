@@ -59,7 +59,7 @@ func GetClientToK8s() (*K8sClient, error) {
 }
 
 // GetListOfFilesFromK8s gets list of files in path from Kubernetes (recursive)
-func GetListOfFilesFromK8s(client K8sClient, path string) ([]string, error) {
+func GetListOfFilesFromK8s(client K8sClient, path, findType, findName string) ([]string, error) {
 	pSplit := strings.Split(path, "/")
 	if err := validateK8sPath(pSplit); err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func GetListOfFilesFromK8s(client K8sClient, path string) ([]string, error) {
 	podName := pSplit[1]
 	containerName := pSplit[2]
 	pathToCopy := getAbsPath(pSplit[3:]...)
-	command := "find " + pathToCopy + " -type f"
+	command := fmt.Sprintf("find %s -type %s -name *%s*", pathToCopy, findType, findName)
 
 	attempts := 3
 	attempt := 0
