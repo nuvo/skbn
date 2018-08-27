@@ -7,9 +7,10 @@ Skbn is a tool for copying files and directories between Kubernetes and AWS S3. 
 
 Skbn uses [glide](https://github.com/Masterminds/glide) as a dependency management tool, since some of the referenced packages are not available using [dep](https://github.com/golang/dep).
 
-`glide up`
-
-`go build -o skbn cmd/skbn.go`
+```
+glide up
+go build -o skbn cmd/skbn.go
+```
 
 
 ## Usage
