@@ -16,14 +16,14 @@ spec:
       serviceAccountName: skbn
       containers:
       - name: skbn
-        image: registry.dev.nvsrc.com/ce/utilities/skbn:7467
+        image: registry.dev.nvsrc.com/ce/utilities/skbn:7468
         command: ["skbn"]
         args:
         - cp
         - --src
         - k8s://vnext/example-chart-649644f5b4-lzmc4/example-chart/tmp/
         - --dst
-        - k8s://vnext/example-chart-649644f5b4-lzmc4/example-chart/tmp2/
+        - s3://nuvo-dev-dbbackup-test/skbn/
         imagePullPolicy: IfNotPresent
         env:
         - name: AWS_REGION

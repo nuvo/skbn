@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: skbn
-  name: skbn
+  name: skbn-experiment
 spec:
   selector:
     matchLabels:
@@ -18,7 +18,7 @@ spec:
       serviceAccountName: skbn
       containers:
       - name: skbn
-        image: registry.dev.nvsrc.com/ce/utilities/skbn:7467
+        image: registry.dev.nvsrc.com/ce/utilities/skbn:7468
         command: ["tail"]
         args:
         - -f
