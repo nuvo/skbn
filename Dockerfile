@@ -8,5 +8,5 @@ RUN apk --no-cache add git glide \
 FROM alpine:3.8
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
-COPY --from=builder /go/src/skbn/skbn /usr/local/bin/skbn
+COPY --from=builder /go/src/github.com/maorfr/skbn/skbn /usr/local/bin/skbn
 CMD ["skbn"]
