@@ -11,8 +11,5 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# dep
+# dep/glide
 vendor/
-
-examples/
-

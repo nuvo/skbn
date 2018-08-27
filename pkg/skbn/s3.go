@@ -14,7 +14,9 @@ import (
 )
 
 // GetClientToS3 checks the connection to S3 and returns the tested client
-func GetClientToS3() (*session.Session, error) {
+func GetClientToS3(path string) (*session.Session, error) {
+	pSplit := strings.Split(path, "/")
+	bucket := pSplit[0]
 	attempts := 3
 	attempt := 0
 	for attempt < attempts {
@@ -29,7 +31,10 @@ func GetClientToS3() (*session.Session, error) {
 			continue
 		}
 
-		_, err = s3.New(s).ListBuckets(&s3.ListBucketsInput{})
+		_, err = s3.New(s).ListObjects(&s3.ListObjectsInput{
+			Bucket:  aws.String(bucket),
+			MaxKeys: aws.Int64(0),
+		})
 		if attempt == attempts {
 			if err != nil {
 				return nil, err

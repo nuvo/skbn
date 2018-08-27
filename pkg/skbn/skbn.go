@@ -20,7 +20,7 @@ func Copy(src, dst string, parallel int) error {
 	if err != nil {
 		return err
 	}
-	srcClient, dstClient, err := GetClients(srcPrefix, dstPrefix)
+	srcClient, dstClient, err := GetClients(srcPrefix, dstPrefix, srcPath, dstPath)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func TestImplementationsExist(srcPrefix, dstPrefix string) error {
 }
 
 // GetClients gets the clients for the source and destination
-func GetClients(srcPrefix, dstPrefix string) (interface{}, interface{}, error) {
+func GetClients(srcPrefix, dstPrefix, srcPath, dstPath string) (interface{}, interface{}, error) {
 	var srcClient interface{}
 	var dstClient interface{}
 
@@ -68,7 +68,7 @@ func GetClients(srcPrefix, dstPrefix string) (interface{}, interface{}, error) {
 		srcClient = client
 		k8sTested = true
 	case "s3":
-		client, err := GetClientToS3()
+		client, err := GetClientToS3(srcPath)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -94,7 +94,7 @@ func GetClients(srcPrefix, dstPrefix string) (interface{}, interface{}, error) {
 			dstClient = srcClient
 			break
 		}
-		client, err := GetClientToS3()
+		client, err := GetClientToS3(dstPath)
 		if err != nil {
 			return nil, nil, err
 		}

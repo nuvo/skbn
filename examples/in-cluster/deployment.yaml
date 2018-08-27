@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: skbn
+  name: skbn
+spec:
+  selector:
+    matchLabels:
+      app: skbn
+  template:
+    metadata:
+      labels:
+        app: skbn
+      annotations:
+        iam.amazonaws.com/role: dbbackup-operator
+    spec:
+      serviceAccountName: skbn
+      containers:
+      - name: skbn
+        image: registry.dev.nvsrc.com/ce/utilities/skbn:7467
+        command: ["tail"]
+        args:
+        - -f
+        - /dev/null
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: AWS_REGION
+          value: eu-central-1

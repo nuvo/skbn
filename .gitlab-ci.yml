@@ -18,7 +18,7 @@ build_code:
   - glide up
   script:
   - for f in $(find test -type f -name "*.go"); do go test -v $f; done
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o skbn cmd/skbn.go
+  - go build -o skbn cmd/skbn.go
   artifacts:
     paths: [skbn]
     expire_in: 1 hrs

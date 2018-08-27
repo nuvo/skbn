@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: skbn
+  name: skbn
+spec:
+  template:
+    metadata:
+      labels:
+        app: skbn
+      annotations:
+        iam.amazonaws.com/role: dbbackup-operator
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: skbn
+      containers:
+      - name: skbn
+        image: registry.dev.nvsrc.com/ce/utilities/skbn:7467
+        command: ["skbn"]
+        args:
+        - cp
+        - --src
+        - k8s://vnext/example-chart-649644f5b4-lzmc4/example-chart/tmp/
+        - --dst
+        - k8s://vnext/example-chart-649644f5b4-lzmc4/example-chart/tmp2/
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: AWS_REGION
+          value: eu-central-1
