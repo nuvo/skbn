@@ -20,8 +20,8 @@ import (
 
 // K8sClient holds a clientset and a config
 type K8sClient struct {
-	clientSet *kubernetes.Clientset
-	config    *rest.Config
+	ClientSet *kubernetes.Clientset
+	Config    *rest.Config
 }
 
 // GetClientToK8s returns a k8sClient
@@ -54,7 +54,7 @@ func GetClientToK8s() (*K8sClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	var client = &K8sClient{clientSet: clientset, config: config}
+	var client = &K8sClient{ClientSet: clientset, Config: config}
 	return client, nil
 }
 
@@ -210,7 +210,7 @@ func validateK8sPath(pathSplit []string) error {
 
 // Exec executes a command in a given container
 func Exec(client K8sClient, namespace, podName, containerName, command string, stdin io.Reader) ([]byte, []byte, error) {
-	clientset, config := client.clientSet, client.config
+	clientset, config := client.ClientSet, client.Config
 
 	req := clientset.Core().RESTClient().Post().
 		Resource("pods").
