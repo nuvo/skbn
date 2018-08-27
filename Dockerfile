@@ -1,5 +1,5 @@
 FROM golang:1.10.3-alpine as builder
-WORKDIR /go/src/skbn/
+WORKDIR /go/src/github.com/maorfr/skbn/
 COPY . .
 RUN apk --no-cache add git glide \
     && glide up \
