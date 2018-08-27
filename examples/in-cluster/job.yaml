@@ -16,7 +16,7 @@ spec:
       serviceAccountName: skbn
       containers:
       - name: skbn
-        image: registry.dev.nvsrc.com/ce/utilities/skbn:7468
+        image: registry.dev.nvsrc.com/ce/utilities/skbn:7469
         command: ["skbn"]
         args:
         - cp

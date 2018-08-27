@@ -40,3 +40,7 @@ Skbn tries to get credentials in the following order:
 
 ### AWS
 Skbn uses the default AWS [credentials chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html).
+
+## Examples
+
+1. In-cluster example
