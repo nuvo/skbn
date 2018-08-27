@@ -6,8 +6,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"skbn/pkg/utils"
 	"strings"
+
+	"github.com/maorfr/skbn/pkg/utils"
 
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"

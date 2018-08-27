@@ -2,11 +2,11 @@ package skbn
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"path/filepath"
-	"skbn/pkg/utils"
 
-	"log"
+	"github.com/maorfr/skbn/pkg/utils"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 )
