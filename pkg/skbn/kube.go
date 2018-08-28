@@ -66,7 +66,7 @@ func GetListOfFilesFromK8s(iClient interface{}, path, findType, findName string)
 		return nil, err
 	}
 	namespace, podName, containerName, findPath := initK8sVariables(pSplit)
-	command := fmt.Sprintf("find %s -type %s -name *%s*", findPath, findType, findName)
+	command := fmt.Sprintf("find %s -type %s -name %s", findPath, findType, findName)
 
 	attempts := 3
 	attempt := 0
