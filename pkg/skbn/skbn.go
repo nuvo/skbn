@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/maorfr/skbn/pkg/utils"
-
-	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 // Copy copies files from src to dst
@@ -161,13 +159,13 @@ func getRelativePaths(client interface{}, prefix, path string) ([]string, error)
 
 	switch prefix {
 	case "k8s":
-		paths, err := GetListOfFilesFromK8s(*client.(*K8sClient), path, "f", "")
+		paths, err := GetListOfFilesFromK8s(client, path, "f", "")
 		if err != nil {
 			return nil, err
 		}
 		relativePaths = paths
 	case "s3":
-		paths, err := GetListOfFilesFromS3(client.(*session.Session), path)
+		paths, err := GetListOfFilesFromS3(client, path)
 		if err != nil {
 			return nil, err
 		}
@@ -184,13 +182,13 @@ func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 
 	switch srcPrefix {
 	case "k8s":
-		bytes, err := DownloadFromK8s(*srcClient.(*K8sClient), srcPath)
+		bytes, err := DownloadFromK8s(srcClient, srcPath)
 		if err != nil {
 			return nil, err
 		}
 		buffer = bytes
 	case "s3":
-		bytes, err := DownloadFromS3(srcClient.(*session.Session), srcPath)
+		bytes, err := DownloadFromS3(srcClient, srcPath)
 		if err != nil {
 			return nil, err
 		}
@@ -205,12 +203,12 @@ func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 func upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, buffer []byte) error {
 	switch dstPrefix {
 	case "k8s":
-		err := UploadToK8s(*dstClient.(*K8sClient), dstPath, srcPath, buffer)
+		err := UploadToK8s(dstClient, dstPath, srcPath, buffer)
 		if err != nil {
 			return err
 		}
 	case "s3":
-		err := UploadToS3(dstClient.(*session.Session), dstPath, srcPath, buffer)
+		err := UploadToS3(dstClient, dstPath, srcPath, buffer)
 		if err != nil {
 			return err
 		}

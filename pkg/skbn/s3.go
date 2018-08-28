@@ -51,7 +51,8 @@ func GetClientToS3(path string) (*session.Session, error) {
 }
 
 // GetListOfFilesFromS3 gets list of files in path from S3 (recursive)
-func GetListOfFilesFromS3(s *session.Session, path string) ([]string, error) {
+func GetListOfFilesFromS3(iClient interface{}, path string) ([]string, error) {
+	s := iClient.(*session.Session)
 	pSplit := strings.Split(path, "/")
 	if err := validateS3Path(pSplit); err != nil {
 		return nil, err
@@ -89,7 +90,8 @@ func GetListOfFilesFromS3(s *session.Session, path string) ([]string, error) {
 }
 
 // DownloadFromS3 downloads a single file from S3
-func DownloadFromS3(s *session.Session, path string) ([]byte, error) {
+func DownloadFromS3(iClient interface{}, path string) ([]byte, error) {
+	s := iClient.(*session.Session)
 	pSplit := strings.Split(path, "/")
 	if err := validateS3Path(pSplit); err != nil {
 		return nil, err
@@ -123,7 +125,8 @@ func DownloadFromS3(s *session.Session, path string) ([]byte, error) {
 }
 
 // UploadToS3 uploads a single file to S3
-func UploadToS3(s *session.Session, toPath, fromPath string, buffer []byte) error {
+func UploadToS3(iClient interface{}, toPath, fromPath string, buffer []byte) error {
+	s := iClient.(*session.Session)
 	pSplit := strings.Split(toPath, "/")
 	if err := validateS3Path(pSplit); err != nil {
 		return err
@@ -159,6 +162,14 @@ func UploadToS3(s *session.Session, toPath, fromPath string, buffer []byte) erro
 	return nil
 }
 
+func getNewSession() (*session.Session, error) {
+	s, err := session.NewSession(&aws.Config{
+		Region: aws.String(os.Getenv("AWS_REGION")),
+	})
+
+	return s, err
+}
+
 func validateS3Path(pathSplit []string) error {
 	if len(pathSplit) >= 1 {
 		return nil
@@ -166,10 +177,9 @@ func validateS3Path(pathSplit []string) error {
 	return fmt.Errorf("illegal path: %s", filepath.Join(pathSplit...))
 }
 
-func getNewSession() (*session.Session, error) {
-	s, err := session.NewSession(&aws.Config{
-		Region: aws.String(os.Getenv("AWS_REGION")),
-	})
+func initS3Variables(split []string) (string, string) {
+	bucket := split[0]
+	path := filepath.Join(split[1:]...)
 
-	return s, err
+	return bucket, path
 }
