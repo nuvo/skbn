@@ -9,6 +9,12 @@ import (
 	"github.com/maorfr/skbn/pkg/utils"
 )
 
+// FromToPair is a pair of FromPath and ToPath
+type FromToPair struct {
+	FromPath string
+	ToPath   string
+}
+
 // Copy copies files from src to dst
 func Copy(src, dst string, parallel int) error {
 	srcPrefix, srcPath := utils.SplitInTwo(src, "://")
@@ -22,7 +28,11 @@ func Copy(src, dst string, parallel int) error {
 	if err != nil {
 		return err
 	}
-	err = PerformCopy(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath, parallel)
+	fromToPaths, err := GetFromToPaths(srcClient, srcPrefix, srcPath, dstPath)
+	if err != nil {
+		return err
+	}
+	err = PerformCopy(srcClient, dstClient, srcPrefix, dstPrefix, fromToPaths, parallel)
 	if err != nil {
 		return err
 	}
@@ -104,23 +114,35 @@ func GetClients(srcPrefix, dstPrefix, srcPath, dstPath string) (interface{}, int
 	return srcClient, dstClient, nil
 }
 
-// PerformCopy performs the actual copy action
-func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath string, parallel int) error {
-
+// GetFromToPaths gets from and to paths to perform the copy on
+func GetFromToPaths(srcClient interface{}, srcPrefix, srcPath, dstPath string) ([]FromToPair, error) {
 	relativePaths, err := getRelativePaths(srcClient, srcPrefix, srcPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	var fromToPaths []FromToPair
+	for _, relativePath := range relativePaths {
+		fromPath := filepath.Join(srcPath, relativePath)
+		toPath := filepath.Join(dstPath, relativePath)
+		fromToPaths = append(fromToPaths, FromToPair{FromPath: fromPath, ToPath: toPath})
+	}
+
+	return fromToPaths, nil
+}
+
+// PerformCopy performs the actual copy action
+func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, fromToPaths []FromToPair, parallel int) error {
+
 	// Execute in parallel
-	totalFiles := len(relativePaths)
+	totalFiles := len(fromToPaths)
 	if parallel == 0 {
 		parallel = totalFiles
 	}
 	bwgSize := int(math.Min(float64(parallel), float64(totalFiles))) // Very stingy :)
 	bwg := utils.NewBoundedWaitGroup(bwgSize)
 	currentLine := 0
-	for _, relativePath := range relativePaths {
+	for _, ftp := range fromToPaths {
 
 		bwg.Add(1)
 		currentLine++
@@ -128,8 +150,7 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 		totalDigits := utils.CountDigits(totalFiles)
 		currentLinePadded := utils.LeftPad2Len(currentLine, 0, totalDigits)
 
-		go func(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded string, totalFiles int) {
-			fromPath := filepath.Join(srcPath, relativePath)
+		go func(srcClient, dstClient interface{}, srcPrefix, fromPath, dstPrefix, toPath, currentLinePadded string, totalFiles int) {
 			buffer, err := download(srcClient, srcPrefix, fromPath)
 			if err != nil {
 				log.Fatal(err)
@@ -138,7 +159,6 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 			}
 			log.Println(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalFiles, fromPath))
 
-			toPath := filepath.Join(dstPath, relativePath)
 			err = upload(dstClient, dstPrefix, toPath, fromPath, buffer)
 			if err != nil {
 				log.Fatal(err)
@@ -148,7 +168,7 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, srcPath, dstPrefix
 			log.Println(fmt.Sprintf("file [%s/%d] dst: %s", currentLinePadded, totalFiles, toPath))
 
 			bwg.Done()
-		}(srcClient, dstClient, srcPrefix, srcPath, dstPrefix, dstPath, relativePath, currentLinePadded, totalFiles)
+		}(srcClient, dstClient, srcPrefix, ftp.FromPath, dstPrefix, ftp.ToPath, currentLinePadded, totalFiles)
 	}
 	bwg.Wait()
 	return nil
