@@ -151,7 +151,7 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 		currentLinePadded := utils.LeftPad2Len(currentLine, 0, totalDigits)
 
 		go func(srcClient, dstClient interface{}, srcPrefix, fromPath, dstPrefix, toPath, currentLinePadded string, totalFiles int) {
-			buffer, err := download(srcClient, srcPrefix, fromPath)
+			buffer, err := Download(srcClient, srcPrefix, fromPath)
 			if err != nil {
 				log.Fatal(err)
 				bwg.Done()
@@ -159,7 +159,7 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 			}
 			log.Println(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalFiles, fromPath))
 
-			err = upload(dstClient, dstPrefix, toPath, fromPath, buffer)
+			err = Upload(dstClient, dstPrefix, toPath, fromPath, buffer)
 			if err != nil {
 				log.Fatal(err)
 				bwg.Done()
@@ -197,7 +197,7 @@ func getRelativePaths(client interface{}, prefix, path string) ([]string, error)
 	return relativePaths, nil
 }
 
-func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) {
+func Download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) {
 	var buffer []byte
 
 	switch srcPrefix {
@@ -220,7 +220,7 @@ func download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 	return buffer, nil
 }
 
-func upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, buffer []byte) error {
+func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, buffer []byte) error {
 	switch dstPrefix {
 	case "k8s":
 		err := UploadToK8s(dstClient, dstPath, srcPath, buffer)
