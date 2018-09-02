@@ -12,12 +12,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 // GetClientToS3 checks the connection to S3 and returns the tested client
 func GetClientToS3(path string) (*session.Session, error) {
 	pSplit := strings.Split(path, "/")
-	bucket := pSplit[0]
+	bucket, _ := initS3Variables(pSplit)
 	attempts := 3
 	attempt := 0
 	for attempt < attempts {
@@ -57,8 +58,7 @@ func GetListOfFilesFromS3(iClient interface{}, path string) ([]string, error) {
 	if err := validateS3Path(pSplit); err != nil {
 		return nil, err
 	}
-	bucket := pSplit[0]
-	pathToCopy := filepath.Join(pSplit[1:]...)
+	bucket, s3Path := initS3Variables(pSplit)
 
 	attempts := 3
 	attempt := 0
@@ -67,7 +67,7 @@ func GetListOfFilesFromS3(iClient interface{}, path string) ([]string, error) {
 
 		objectOutput, err := s3.New(s).ListObjects(&s3.ListObjectsInput{
 			Bucket: aws.String(bucket),
-			Prefix: aws.String(pathToCopy),
+			Prefix: aws.String(s3Path),
 		})
 		if err != nil {
 			if attempt == attempts {
@@ -80,7 +80,7 @@ func GetListOfFilesFromS3(iClient interface{}, path string) ([]string, error) {
 		var outLines []string
 		for _, content := range objectOutput.Contents {
 			line := *content.Key
-			outLines = append(outLines, strings.Replace(line, pathToCopy, "", 1))
+			outLines = append(outLines, strings.Replace(line, s3Path, "", 1))
 		}
 
 		return outLines, nil
@@ -96,18 +96,21 @@ func DownloadFromS3(iClient interface{}, path string) ([]byte, error) {
 	if err := validateS3Path(pSplit); err != nil {
 		return nil, err
 	}
-	bucket := pSplit[0]
-	s3Path := filepath.Join(pSplit[1:]...)
+	bucket, s3Path := initS3Variables(pSplit)
 
 	attempts := 3
 	attempt := 0
 	for attempt < attempts {
 		attempt++
 
-		objectOutput, err := s3.New(s).GetObject(&s3.GetObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(s3Path),
-		})
+		buffer := &aws.WriteAtBuffer{}
+		downloader := s3manager.NewDownloader(s)
+
+		_, err := downloader.Download(buffer,
+			&s3.GetObjectInput{
+				Bucket: aws.String(bucket),
+				Key:    aws.String(s3Path),
+			})
 		if err != nil {
 			if attempt == attempts {
 				return nil, err
@@ -116,9 +119,7 @@ func DownloadFromS3(iClient interface{}, path string) ([]byte, error) {
 			continue
 		}
 
-		buffer := make([]byte, int(*objectOutput.ContentLength))
-		objectOutput.Body.Read(buffer)
-		return buffer, nil
+		return buffer.Bytes(), nil
 	}
 
 	return nil, nil
@@ -135,28 +136,28 @@ func UploadToS3(iClient interface{}, toPath, fromPath string, buffer []byte) err
 		_, fileName := filepath.Split(fromPath)
 		pSplit = append(pSplit, fileName)
 	}
-	bucket := pSplit[0]
-	s3Path := filepath.Join(pSplit[1:]...)
+	bucket, s3Path := initS3Variables(pSplit)
 
 	attempts := 3
 	attempt := 0
 	for attempt < attempts {
 		attempt++
 
-		_, err := s3.New(s).PutObject(&s3.PutObjectInput{
+		uploader := s3manager.NewUploader(s)
+
+		_, err := uploader.Upload(&s3manager.UploadInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(s3Path),
 			Body:   bytes.NewReader(buffer),
 		})
-		if attempt == attempts {
-			if err != nil {
+		if err != nil {
+			if attempt == attempts {
 				return err
 			}
+			utils.Sleep(attempt)
+			continue
 		}
-		if err == nil {
-			return nil
-		}
-		utils.Sleep(attempt)
+		return nil
 	}
 
 	return nil
