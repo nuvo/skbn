@@ -116,7 +116,7 @@ func GetClients(srcPrefix, dstPrefix, srcPath, dstPath string) (interface{}, int
 
 // GetFromToPaths gets from and to paths to perform the copy on
 func GetFromToPaths(srcClient interface{}, srcPrefix, srcPath, dstPath string) ([]FromToPair, error) {
-	relativePaths, err := getRelativePaths(srcClient, srcPrefix, srcPath)
+	relativePaths, err := GetListOfFiles(srcClient, srcPrefix, srcPath)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,8 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 	return nil
 }
 
-func getRelativePaths(client interface{}, prefix, path string) ([]string, error) {
+// GetListOfFiles gets relative paths from the provided path
+func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
 	var relativePaths []string
 
 	switch prefix {
@@ -197,6 +198,7 @@ func getRelativePaths(client interface{}, prefix, path string) ([]string, error)
 	return relativePaths, nil
 }
 
+// Download downloads downloads a single file from path and returns a byte array
 func Download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) {
 	var buffer []byte
 
@@ -220,6 +222,7 @@ func Download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 	return buffer, nil
 }
 
+// Upload uploads a single file provided as a byte array to path
 func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, buffer []byte) error {
 	switch dstPrefix {
 	case "k8s":
