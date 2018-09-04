@@ -172,24 +172,34 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) er
 			continue
 		}
 
-		command = fmt.Sprintf("cp /dev/stdin %s", pathToCopy)
-		stdin := bytes.NewReader(buffer)
-		_, stderr, err = Exec(client, namespace, podName, containerName, command, stdin)
+		chunkSize := 16777215
 
-		if len(stderr) != 0 {
-			if attempt == attempts {
-				return fmt.Errorf("STDERR: " + (string)(stderr))
+		command = fmt.Sprintf("dd if=/dev/stdin of=%s", pathToCopy)
+		for i := 0; i < len(buffer); i += chunkSize {
+			end := i + chunkSize
+			if end > len(buffer) {
+				end = len(buffer)
 			}
-			utils.Sleep(attempt)
-			continue
-		}
-		if err != nil {
-			if attempt == attempts {
-				return err
+			stdin := bytes.NewReader(buffer[i:end])
+			_, _, err = Exec(client, namespace, podName, containerName, command, stdin)
+			command = fmt.Sprintf("dd if=/dev/stdin of=%s oflag=append conv=notrunc", pathToCopy)
+
+			// if len(stderr) != 0 {
+			// 	if attempt == attempts {
+			// 		return fmt.Errorf("STDERR: " + (string)(stderr))
+			// 	}
+			// 	utils.Sleep(attempt)
+			// 	continue
+			// }
+			if err != nil {
+				if attempt == attempts {
+					return err
+				}
+				utils.Sleep(attempt)
+				continue
 			}
-			utils.Sleep(attempt)
-			continue
 		}
+		return nil
 	}
 
 	return nil
