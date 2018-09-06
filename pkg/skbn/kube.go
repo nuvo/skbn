@@ -111,7 +111,7 @@ func DownloadFromK8s(iClient interface{}, path string) ([]byte, error) {
 		return nil, err
 	}
 	namespace, podName, containerName, pathToCopy := initK8sVariables(pSplit)
-	command := fmt.Sprintf("cp %s /dev/stdout", pathToCopy)
+	command := fmt.Sprintf("cat %s", pathToCopy)
 
 	attempts := 3
 	attempt := 0
