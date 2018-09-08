@@ -5,7 +5,6 @@ import (
 	"log"
 	"math"
 	"path/filepath"
-	"strings"
 
 	"github.com/maorfr/skbn/pkg/utils"
 )
@@ -152,11 +151,6 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 		currentLinePadded := utils.LeftPad2Len(currentLine, 0, totalDigits)
 
 		go func(srcClient, dstClient interface{}, srcPrefix, fromPath, dstPrefix, toPath, currentLinePadded string, totalFiles int) {
-			if strings.Contains(fromPath, " ") {
-				bwg.Done()
-				log.Printf("file [%s/%d] skip: %s", currentLinePadded, totalFiles, fromPath)
-				return
-			}
 			buffer, err := Download(srcClient, srcPrefix, fromPath)
 			if err != nil {
 				bwg.Done()

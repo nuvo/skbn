@@ -66,7 +66,7 @@ func GetListOfFilesFromK8s(iClient interface{}, path, findType, findName string)
 		return nil, err
 	}
 	namespace, podName, containerName, findPath := initK8sVariables(pSplit)
-	command := fmt.Sprintf("find %s -type %s -name %s", findPath, findType, findName)
+	command := []string{"find", findPath, "-type", findType, "-name", findName}
 
 	attempts := 3
 	attempt := 0
@@ -111,7 +111,7 @@ func DownloadFromK8s(iClient interface{}, path string) ([]byte, error) {
 		return nil, err
 	}
 	namespace, podName, containerName, pathToCopy := initK8sVariables(pSplit)
-	command := fmt.Sprintf("cat %s", pathToCopy)
+	command := []string{"cat", pathToCopy}
 
 	attempts := 3
 	attempt := 0
@@ -154,7 +154,7 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) er
 	for attempt < attempts {
 		attempt++
 		dir, _ := filepath.Split(pathToCopy)
-		command := fmt.Sprintf("mkdir -p %s", dir)
+		command := []string{"mkdir", "-p", dir}
 		_, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
 
 		if len(stderr) != 0 {
@@ -173,24 +173,25 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) er
 		}
 
 		chunkSize := 16777215
+		command = []string{"dd", "if=/dev/stdin", "of=" + pathToCopy}
 
-		command = fmt.Sprintf("dd if=/dev/stdin of=%s", pathToCopy)
+		// Implement upload using chunks
 		for i := 0; i < len(buffer); i += chunkSize {
 			end := i + chunkSize
 			if end > len(buffer) {
 				end = len(buffer)
 			}
 			stdin := bytes.NewReader(buffer[i:end])
-			_, _, err = Exec(client, namespace, podName, containerName, command, stdin)
-			command = fmt.Sprintf("dd if=/dev/stdin of=%s oflag=append conv=notrunc", pathToCopy)
+			_, stderr, err = Exec(client, namespace, podName, containerName, command, stdin)
+			command = []string{"dd", "if=/dev/stdin", "of=" + pathToCopy, "oflag=append", "conv=notrunc"}
 
-			// if len(stderr) != 0 {
-			// 	if attempt == attempts {
-			// 		return fmt.Errorf("STDERR: " + (string)(stderr))
-			// 	}
-			// 	utils.Sleep(attempt)
-			// 	continue
-			// }
+			if len(stderr) != 0 {
+				if attempt == attempts {
+					return fmt.Errorf("STDERR: " + (string)(stderr))
+				}
+				utils.Sleep(attempt)
+				continue
+			}
 			if err != nil {
 				if attempt == attempts {
 					return err
@@ -206,7 +207,7 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) er
 }
 
 // Exec executes a command in a given container
-func Exec(client K8sClient, namespace, podName, containerName, command string, stdin io.Reader) ([]byte, []byte, error) {
+func Exec(client K8sClient, namespace, podName, containerName string, command []string, stdin io.Reader) ([]byte, []byte, error) {
 	clientset, config := client.ClientSet, client.Config
 
 	req := clientset.Core().RESTClient().Post().
@@ -221,7 +222,7 @@ func Exec(client K8sClient, namespace, podName, containerName, command string, s
 
 	parameterCodec := runtime.NewParameterCodec(scheme)
 	req.VersionedParams(&core_v1.PodExecOptions{
-		Command:   strings.Fields(command),
+		Command:   command,
 		Container: containerName,
 		Stdin:     stdin != nil,
 		Stdout:    true,
