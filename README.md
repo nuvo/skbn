@@ -5,7 +5,7 @@ Skbn is a tool for copying files and directories between Kubernetes and AWS S3. 
 ## Install
 
 ```
-wget -qO- https://github.com/maorfr/skbn/releases/download/0.1.0/skbn.tar.gz | sudo tar xvz -C /usr/local/bin
+wget -qO- https://github.com/maorfr/skbn/releases/download/0.1.1/skbn.tar.gz | sudo tar xvz -C /usr/local/bin
 ```
 
 ## Build from source
