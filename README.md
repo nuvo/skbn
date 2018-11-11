@@ -1,6 +1,6 @@
 # Skbn
 
-Skbn is a tool for copying files and directories between Kubernetes and AWS S3. It is named after the 1981 video game [Sokoban](https://en.wikipedia.org/wiki/Sokoban).
+Skbn is a tool for copying files and directories between Kubernetes, AWS S3 or Azure Blob Storage. It is named after the 1981 video game [Sokoban](https://en.wikipedia.org/wiki/Sokoban).
 
 ## Install
 
@@ -36,6 +36,22 @@ skbn cp \
     --dst k8s://<namespace>/<podName>/<containerName>/<path>
 ```
 
+### Copy files from Kubernetes to Azure Blob Storage
+
+```
+skbn cp \
+    --src k8s://<namespace>/<podName>/<containerName>/<path> \
+    --dst abs://<account>/<container>/<path>
+```
+
+### Copy files from Azure Blob Storage to Kubernetes
+
+```
+skbn cp \
+    --src abs://<account>/<container>/<path> \
+    --dst k8s://<namespace>/<podName>/<containerName>/<path>
+```
+
 ## Credentials
 
 
@@ -50,6 +66,10 @@ Skbn tries to get credentials in the following order:
 ### AWS
 
 Skbn uses the default AWS [credentials chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html).
+
+### Azure Blob Storage
+
+Skbn uses `AZURE_STORAGE_ACCOUNT` and `AZURE_STORAGE_ACCESS_KEY ` environment variables.
 
 ## Examples
 
