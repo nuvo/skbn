@@ -1,5 +1,5 @@
 FROM golang:1.10.3-alpine as builder
-WORKDIR /go/src/github.com/maorfr/skbn/
+WORKDIR /go/src/github.com/nuvo/skbn/
 COPY . .
 RUN apk --no-cache add git glide \
     && glide up \
@@ -8,5 +8,5 @@ RUN apk --no-cache add git glide \
 FROM alpine:3.8
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
-COPY --from=builder /go/src/github.com/maorfr/skbn/skbn /usr/local/bin/skbn
+COPY --from=builder /go/src/github.com/nuvo/skbn/skbn /usr/local/bin/skbn
 CMD ["skbn"]

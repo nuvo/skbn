@@ -1,11 +1,14 @@
 # Skbn
 
-Skbn is a tool for copying files and directories between Kubernetes and AWS S3. It is named after the 1981 video game [Sokoban](https://en.wikipedia.org/wiki/Sokoban).
+Skbn is a tool for copying files and directories between Kubernetes and cloud storage providers. It is named after the 1981 video game [Sokoban](https://en.wikipedia.org/wiki/Sokoban).
+Skbn currently supports the following providers:
+
+* AWS S3
 
 ## Install
 
 ```
-wget -qO- https://github.com/maorfr/skbn/releases/download/0.1.1/skbn.tar.gz | sudo tar xvz -C /usr/local/bin
+wget -qO- https://github.com/nuvo/skbn/releases/download/0.1.1/skbn.tar.gz | sudo tar xvz -C /usr/local/bin
 ```
 
 ## Build from source
@@ -53,5 +56,5 @@ Skbn uses the default AWS [credentials chain](https://docs.aws.amazon.com/sdk-fo
 
 ## Examples
 
-1. [In-cluster example](https://github.com/maorfr/skbn/tree/master/examples/in-cluster)
-2. [Code example](https://github.com/maorfr/skbn/tree/master/examples/code)
+1. [In-cluster example](https://github.com/nuvo/skbn/tree/master/examples/in-cluster)
+2. [Code example](https://github.com/nuvo/skbn/tree/master/examples/code)
