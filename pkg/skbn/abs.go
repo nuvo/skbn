@@ -162,7 +162,9 @@ func GetListOfFilesFromAbs(ctx context.Context, iClient interface{}, path string
 		marker = listBlob.NextMarker
 
 		for _, blobInfo := range listBlob.Segment.BlobItems {
-			bl = append(bl, strings.Replace(blobInfo.Name, p, "", 1))
+			if strings.Contains(blobInfo.Name, p) {
+				bl = append(bl, strings.Replace(blobInfo.Name, p, "", 1))
+			}
 		}
 	}
 
