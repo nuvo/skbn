@@ -58,27 +58,35 @@ func getNewPipeline() (pipeline.Pipeline, error) {
 
 	pl := azblob.NewPipeline(credential, po)
 
-	return pl, err
+	return pl, nil
 }
 
 func getServiceURL(pl pipeline.Pipeline, accountName string) (azblob.ServiceURL, error) {
 	URL, err := url.Parse(
 		fmt.Sprintf("https://%s.blob.core.windows.net/", accountName))
 
+	if err != nil {
+		return nil, err
+	}
+
 	surl := azblob.NewServiceURL(*URL, pl)
-	return surl, err
+	return surl, nil
 }
 
 func getContainerURL(pl pipeline.Pipeline, accountName string, containerName string) (azblob.ContainerURL, error) {
 	URL, err := url.Parse(
 		fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName))
 
+	if err != nil {
+		return nil, err
+	}
+
 	curl := azblob.NewContainerURL(*URL, pl)
-	return curl, err
+	return curl, nil
 }
 
-func getBlobURL(curl azblob.ContainerURL, blob string) (azblob.BlockBlobURL, error) {
-	return curl.NewBlockBlobURL(blob), err
+func getBlobURL(curl azblob.ContainerURL, blob string) azblob.BlockBlobURL {
+	return curl.NewBlockBlobURL(blob)
 }
 
 func listContainers(ctx context.Context, surl azblob.ServiceURL) ([]azblob.ContainerItem, error) {
@@ -177,12 +185,7 @@ func DownloadFromAbs(ctx context.Context, iClient interface{}, path string) ([]b
 		return nil, err
 	}
 
-	bu, err := getBlobURL(cu, p)
-
-	if err != nil {
-		return nil, err
-	}
-
+	bu := getBlobURL(cu, p)
 	dr, err := bu.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
 
 	if err != nil {
@@ -221,11 +224,7 @@ func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath stri
 		return err
 	}
 
-	bu, err := getBlobURL(cu, p)
-
-	if err != nil {
-		return err
-	}
+	bu := getBlobURL(cu, p)
 
 	_, err = azblob.UploadBufferToBlockBlob(ctx, buffer, bu, azblob.UploadToBlockBlobOptions{
 		BlockSize:   4 * 1024 * 1024,
