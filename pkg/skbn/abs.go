@@ -81,11 +81,6 @@ func getBlobURL(curl azblob.ContainerURL, blob string) (azblob.BlockBlobURL, err
 	return curl.NewBlockBlobURL(blob), err
 }
 
-func createContainer(ctx context.Context, pl pipeline.Pipeline, curl azblob.ContainerURL) (*azblob.ContainerCreateResponse, error) {
-	cr, err := curl.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
-	return cr, err
-}
-
 func listContainers(ctx context.Context, surl azblob.ServiceURL) ([]azblob.ContainerItem, error) {
 	lc, err := surl.ListContainersSegment(ctx, azblob.Marker{}, azblob.ListContainersSegmentOptions{})
 	return lc.ContainerItems, err
@@ -128,7 +123,7 @@ func GetClientToAbs(ctx context.Context, path string) (pipeline.Pipeline, error)
 		return nil, err
 	}
 
-	return pl, err
+	return pl, nil
 }
 
 // GetListOfFilesFromAbs gets list of files in path from azure blob storage (recursive)
@@ -163,7 +158,7 @@ func GetListOfFilesFromAbs(ctx context.Context, iClient interface{}, path string
 		}
 	}
 
-	return bl, err
+	return bl, nil
 }
 
 // DownloadFromAbs downloads a single file from azure blob storage
@@ -198,7 +193,11 @@ func DownloadFromAbs(ctx context.Context, iClient interface{}, path string) ([]b
 	dd := bytes.Buffer{}
 	_, err = dd.ReadFrom(bs)
 
-	return dd.Bytes(), err
+	if err != nil {
+		return nil, err
+	}
+
+	return dd.Bytes(), nil
 }
 
 // UploadToAbs uploads a single file to azure blob storage
@@ -232,5 +231,9 @@ func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath stri
 		BlockSize:   4 * 1024 * 1024,
 		Parallelism: 16})
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
