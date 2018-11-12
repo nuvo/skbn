@@ -7,7 +7,7 @@ import (
 	"math"
 	"path/filepath"
 
-	"github.com/maorfr/skbn/pkg/utils"
+	"github.com/nuvo/skbn/pkg/utils"
 )
 
 // FromToPair is a pair of FromPath and ToPath
