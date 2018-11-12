@@ -66,7 +66,7 @@ func getServiceURL(pl pipeline.Pipeline, accountName string) (azblob.ServiceURL,
 		fmt.Sprintf("https://%s.blob.core.windows.net/", accountName))
 
 	if err != nil {
-		return nil, err
+		return azblob.ServiceURL{}, err
 	}
 
 	surl := azblob.NewServiceURL(*URL, pl)
@@ -78,7 +78,7 @@ func getContainerURL(pl pipeline.Pipeline, accountName string, containerName str
 		fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName))
 
 	if err != nil {
-		return nil, err
+		return azblob.ContainerURL{}, err
 	}
 
 	curl := azblob.NewContainerURL(*URL, pl)
