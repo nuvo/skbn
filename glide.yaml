@@ -6,6 +6,14 @@ import:
   - aws
   - aws/session
   - service/s3
+- package: github.com/Azure/azure-pipeline-go
+  version: "v0.1.8"
+  subpackages:
+  - pipeline
+- package: github.com/Azure/azure-storage-blob-go
+  version: "0.3.0"
+  subpackages:
+  - azblob
 - package: github.com/spf13/cobra
   version: v0.0.3
 - package: k8s.io/api
@@ -22,4 +30,3 @@ import:
   - kubernetes
   - rest
   - tools/clientcmd
-

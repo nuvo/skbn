@@ -1,6 +1,7 @@
 package skbn
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math"
@@ -45,6 +46,7 @@ func TestImplementationsExist(srcPrefix, dstPrefix string) error {
 	switch srcPrefix {
 	case "k8s":
 	case "s3":
+	case "abs":
 	default:
 		return fmt.Errorf(srcPrefix + " not implemented")
 	}
@@ -52,6 +54,7 @@ func TestImplementationsExist(srcPrefix, dstPrefix string) error {
 	switch dstPrefix {
 	case "k8s":
 	case "s3":
+	case "abs":
 	default:
 		return fmt.Errorf(dstPrefix + " not implemented")
 	}
@@ -64,8 +67,12 @@ func GetClients(srcPrefix, dstPrefix, srcPath, dstPath string) (interface{}, int
 	var srcClient interface{}
 	var dstClient interface{}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	k8sTested := false
 	s3Tested := false
+	absTested := false
 
 	switch srcPrefix {
 	case "k8s":
@@ -82,6 +89,13 @@ func GetClients(srcPrefix, dstPrefix, srcPath, dstPath string) (interface{}, int
 		}
 		srcClient = client
 		s3Tested = true
+	case "abs":
+		client, err := GetClientToAbs(ctx, srcPath)
+		if err != nil {
+			return nil, nil, err
+		}
+		srcClient = client
+		absTested = true
 	default:
 		return nil, nil, fmt.Errorf(srcPrefix + " not implemented")
 	}
@@ -103,6 +117,16 @@ func GetClients(srcPrefix, dstPrefix, srcPath, dstPath string) (interface{}, int
 			break
 		}
 		client, err := GetClientToS3(dstPath)
+		if err != nil {
+			return nil, nil, err
+		}
+		dstClient = client
+	case "abs":
+		if absTested {
+			dstClient = srcClient
+			break
+		}
+		client, err := GetClientToAbs(ctx, dstPath)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -178,6 +202,9 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
 	var relativePaths []string
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	switch prefix {
 	case "k8s":
 		paths, err := GetListOfFilesFromK8s(client, path, "f", "*")
@@ -187,6 +214,12 @@ func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
 		relativePaths = paths
 	case "s3":
 		paths, err := GetListOfFilesFromS3(client, path)
+		if err != nil {
+			return nil, err
+		}
+		relativePaths = paths
+	case "abs":
+		paths, err := GetListOfFilesFromAbs(ctx, client, path)
 		if err != nil {
 			return nil, err
 		}
@@ -202,6 +235,9 @@ func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
 func Download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) {
 	var buffer []byte
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	switch srcPrefix {
 	case "k8s":
 		bytes, err := DownloadFromK8s(srcClient, srcPath)
@@ -215,6 +251,12 @@ func Download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 			return nil, err
 		}
 		buffer = bytes
+	case "abs":
+		bytes, err := DownloadFromAbs(ctx, srcClient, srcPath)
+		if err != nil {
+			return nil, err
+		}
+		buffer = bytes
 	default:
 		return nil, fmt.Errorf(srcPrefix + " not implemented")
 	}
@@ -224,6 +266,9 @@ func Download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) 
 
 // Upload uploads a single file provided as a byte array to path
 func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, buffer []byte) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	switch dstPrefix {
 	case "k8s":
 		err := UploadToK8s(dstClient, dstPath, srcPath, buffer)
@@ -232,6 +277,11 @@ func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, buffer []
 		}
 	case "s3":
 		err := UploadToS3(dstClient, dstPath, srcPath, buffer)
+		if err != nil {
+			return err
+		}
+	case "abs":
+		err := UploadToAbs(ctx, dstClient, dstPath, srcPath, buffer)
 		if err != nil {
 			return err
 		}
