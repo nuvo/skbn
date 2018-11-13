@@ -91,7 +91,12 @@ func getBlobURL(curl azblob.ContainerURL, blob string) azblob.BlockBlobURL {
 
 func listContainers(ctx context.Context, surl azblob.ServiceURL) ([]azblob.ContainerItem, error) {
 	lc, err := surl.ListContainersSegment(ctx, azblob.Marker{}, azblob.ListContainersSegmentOptions{})
-	return lc.ContainerItems, err
+
+	if err != nil {
+		return nil, err
+	}
+
+	return lc.ContainerItems, nil
 }
 
 func containerExists(list []azblob.ContainerItem, containerName string) bool {
