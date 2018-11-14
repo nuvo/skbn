@@ -1,0 +1,29 @@
+# .goreleaser.yml
+builds:
+- main: cmd/skbn.go
+  binary: skbn
+  goos:
+  - windows
+  - darwin
+  - linux
+  goarch:
+  - amd64
+  env:
+  - CGO_ENABLED=0
+  ldflags:
+  - -s -w -X main.GitTag={{.Tag}} -X main.GitCommit={{.ShortCommit}}
+archive:
+  name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}"
+  format: tar.gz
+  wrap_in_directory: true
+  format_overrides:
+  - goos: windows
+    format: zip
+  replacements:
+    darwin: macos
+dockers:
+- binary: skbn
+  dockerfile: Dockerfile
+  image_templates:
+  - "nuvo/{{.ProjectName}}:{{ .Tag }}"
+  - "nuvo/{{.ProjectName}}:latest"
