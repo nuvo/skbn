@@ -136,7 +136,7 @@ Skbn uses the default AWS [credentials chain](https://docs.aws.amazon.com/sdk-fo
 
 ### Azure Blob Storage
 
-Skbn uses `AZURE_STORAGE_ACCOUNT` and `AZURE_STORAGE_ACCESS_KEY` environment variables for authenication.
+Skbn uses `AZURE_STORAGE_ACCOUNT` and `AZURE_STORAGE_ACCESS_KEY` environment variables for authentication.
 
 ## Examples
 
