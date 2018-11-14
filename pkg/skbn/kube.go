@@ -172,38 +172,54 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) er
 			continue
 		}
 
-		chunkSize := 16777215
-		command = []string{"dd", "if=/dev/stdin", "of=" + pathToCopy}
+		command = []string{"touch", pathToCopy}
+		_, stderr, err = Exec(client, namespace, podName, containerName, command, nil)
 
-		// Implement upload using chunks
-		for i := 0; i < len(buffer); i += chunkSize {
-			end := i + chunkSize
-			if end > len(buffer) {
-				end = len(buffer)
+		if len(stderr) != 0 {
+			if attempt == attempts {
+				return fmt.Errorf("STDERR: " + (string)(stderr))
 			}
-			stdin := bytes.NewReader(buffer[i:end])
-			_, stderr, err = Exec(client, namespace, podName, containerName, command, stdin)
-			command = []string{"dd", "if=/dev/stdin", "of=" + pathToCopy, "oflag=append", "conv=notrunc"}
+			utils.Sleep(attempt)
+			continue
+		}
+		if err != nil {
+			if attempt == attempts {
+				return err
+			}
+			utils.Sleep(attempt)
+			continue
+		}
 
-			if len(stderr) != 0 {
-				if attempt == attempts {
-					return fmt.Errorf("STDERR: " + (string)(stderr))
-				}
-				utils.Sleep(attempt)
-				continue
+		command = []string{"cp", "/dev/stdin", pathToCopy}
+		stdin := bytes.NewReader(buffer)
+		_, stderr, err = Exec(client, namespace, podName, containerName, command, readerWrapper{stdin})
+
+		if len(stderr) != 0 {
+			if attempt == attempts {
+				return fmt.Errorf("STDERR: " + (string)(stderr))
 			}
-			if err != nil {
-				if attempt == attempts {
-					return err
-				}
-				utils.Sleep(attempt)
-				continue
+			utils.Sleep(attempt)
+			continue
+		}
+		if err != nil {
+			if attempt == attempts {
+				return err
 			}
+			utils.Sleep(attempt)
+			continue
 		}
 		return nil
 	}
 
 	return nil
+}
+
+type readerWrapper struct {
+	reader io.Reader
+}
+
+func (r readerWrapper) Read(p []byte) (int, error) {
+	return r.reader.Read(p)
 }
 
 // Exec executes a command in a given container
