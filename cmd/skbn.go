@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -28,6 +29,7 @@ func NewRootCmd(args []string) *cobra.Command {
 	out := cmd.OutOrStdout()
 
 	cmd.AddCommand(NewCpCmd(out))
+	cmd.AddCommand(NewVersionCmd(out))
 
 	return cmd
 }
@@ -62,6 +64,22 @@ func NewCpCmd(out io.Writer) *cobra.Command {
 
 	cmd.MarkFlagRequired("src")
 	cmd.MarkFlagRequired("dst")
+
+	return cmd
+}
+
+var GitTag, GitCommit string
+
+// NewVersionCmd prints version information
+func NewVersionCmd(out io.Writer) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		Long:  ``,
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("Version %s (git-%s)\n", GitTag, GitCommit)
+		},
+	}
 
 	return cmd
 }
