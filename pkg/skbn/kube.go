@@ -74,19 +74,12 @@ func GetListOfFilesFromK8s(iClient interface{}, path, findType, findName string)
 		attempt++
 
 		output, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
-		if len(stderr) != 0 {
-			if attempt == attempts {
-				return nil, fmt.Errorf("STDERR: " + (string)(stderr))
-			}
-			utils.Sleep(attempt)
+		shouldContinue, err := checkerr(stderr, attempt, attempts, err)
+		if shouldContinue {
 			continue
 		}
 		if err != nil {
-			if attempt == attempts {
-				return nil, err
-			}
-			utils.Sleep(attempt)
-			continue
+			return nil, err
 		}
 
 		lines := strings.Split((string)(output), "\n")
@@ -119,18 +112,14 @@ func DownloadFromK8s(iClient interface{}, path string) ([]byte, error) {
 		attempt++
 
 		stdout, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
-		if attempt == attempts {
-			if len(stderr) != 0 {
-				return stdout, fmt.Errorf("STDERR: " + (string)(stderr))
-			}
-			if err != nil {
-				return stdout, err
-			}
+		shouldContinue, err := checkerr(stderr, attempt, attempts, err)
+		if shouldContinue {
+			continue
 		}
-		if err == nil {
-			return stdout, nil
+		if err != nil {
+			return nil, err
 		}
-		utils.Sleep(attempt)
+		return stdout, nil
 	}
 
 	return nil, nil
@@ -156,70 +145,38 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) er
 		dir, _ := filepath.Split(pathToCopy)
 		command := []string{"mkdir", "-p", dir}
 		_, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
-
-		if len(stderr) != 0 {
-			if attempt == attempts {
-				return fmt.Errorf("STDERR: " + (string)(stderr))
-			}
-			utils.Sleep(attempt)
+		shouldContinue, err := checkerr(stderr, attempt, attempts, err)
+		if shouldContinue {
 			continue
 		}
 		if err != nil {
-			if attempt == attempts {
-				return err
-			}
-			utils.Sleep(attempt)
-			continue
+			return err
 		}
 
 		command = []string{"touch", pathToCopy}
 		_, stderr, err = Exec(client, namespace, podName, containerName, command, nil)
-
-		if len(stderr) != 0 {
-			if attempt == attempts {
-				return fmt.Errorf("STDERR: " + (string)(stderr))
-			}
-			utils.Sleep(attempt)
+		shouldContinue, err = checkerr(stderr, attempt, attempts, err)
+		if shouldContinue {
 			continue
 		}
 		if err != nil {
-			if attempt == attempts {
-				return err
-			}
-			utils.Sleep(attempt)
-			continue
+			return err
 		}
 
 		command = []string{"cp", "/dev/stdin", pathToCopy}
 		stdin := bytes.NewReader(buffer)
 		_, stderr, err = Exec(client, namespace, podName, containerName, command, readerWrapper{stdin})
-
-		if len(stderr) != 0 {
-			if attempt == attempts {
-				return fmt.Errorf("STDERR: " + (string)(stderr))
-			}
-			utils.Sleep(attempt)
+		shouldContinue, err = checkerr(stderr, attempt, attempts, err)
+		if shouldContinue {
 			continue
 		}
 		if err != nil {
-			if attempt == attempts {
-				return err
-			}
-			utils.Sleep(attempt)
-			continue
+			return err
 		}
 		return nil
 	}
 
 	return nil
-}
-
-type readerWrapper struct {
-	reader io.Reader
-}
-
-func (r readerWrapper) Read(p []byte) (int, error) {
-	return r.reader.Read(p)
 }
 
 // Exec executes a command in a given container
@@ -283,4 +240,30 @@ func initK8sVariables(split []string) (string, string, string, string) {
 
 func getAbsPath(path ...string) string {
 	return filepath.Join("/", filepath.Join(path...))
+}
+
+func checkerr(stderr []byte, attempt, attempts int, err error) (bool, error) {
+	if len(stderr) != 0 {
+		if attempt == attempts {
+			return false, fmt.Errorf("STDERR: " + (string)(stderr))
+		}
+		utils.Sleep(attempt)
+		return true, nil
+	}
+	if err != nil {
+		if attempt == attempts {
+			return false, err
+		}
+		utils.Sleep(attempt)
+		return true, nil
+	}
+	return false, nil
+}
+
+type readerWrapper struct {
+	reader io.Reader
+}
+
+func (r readerWrapper) Read(p []byte) (int, error) {
+	return r.reader.Read(p)
 }
