@@ -64,75 +64,16 @@ func TestImplementationsExist(srcPrefix, dstPrefix string) error {
 
 // GetClients gets the clients for the source and destination
 func GetClients(srcPrefix, dstPrefix, srcPath, dstPath string) (interface{}, interface{}, error) {
-	var srcClient interface{}
-	var dstClient interface{}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	k8sTested := false
-	s3Tested := false
-	absTested := false
-
-	switch srcPrefix {
-	case "k8s":
-		client, err := GetClientToK8s()
-		if err != nil {
-			return nil, nil, err
-		}
-		srcClient = client
-		k8sTested = true
-	case "s3":
-		client, err := GetClientToS3(srcPath)
-		if err != nil {
-			return nil, nil, err
-		}
-		srcClient = client
-		s3Tested = true
-	case "abs":
-		client, err := GetClientToAbs(ctx, srcPath)
-		if err != nil {
-			return nil, nil, err
-		}
-		srcClient = client
-		absTested = true
-	default:
-		return nil, nil, fmt.Errorf(srcPrefix + " not implemented")
+	srcClient, tested, err := initClient(ctx, nil, srcPrefix, srcPath, "")
+	if err != nil {
+		return nil, nil, err
 	}
-
-	switch dstPrefix {
-	case "k8s":
-		if k8sTested {
-			dstClient = srcClient
-			break
-		}
-		client, err := GetClientToK8s()
-		if err != nil {
-			return nil, nil, err
-		}
-		dstClient = client
-	case "s3":
-		if s3Tested {
-			dstClient = srcClient
-			break
-		}
-		client, err := GetClientToS3(dstPath)
-		if err != nil {
-			return nil, nil, err
-		}
-		dstClient = client
-	case "abs":
-		if absTested {
-			dstClient = srcClient
-			break
-		}
-		client, err := GetClientToAbs(ctx, dstPath)
-		if err != nil {
-			return nil, nil, err
-		}
-		dstClient = client
-	default:
-		return nil, nil, fmt.Errorf(srcPrefix + " not implemented")
+	dstClient, _, err := initClient(ctx, srcClient, dstPrefix, dstPath, tested)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return srcClient, dstClient, nil
@@ -200,10 +141,10 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 
 // GetListOfFiles gets relative paths from the provided path
 func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
-	var relativePaths []string
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	var relativePaths []string
 
 	switch prefix {
 	case "k8s":
@@ -233,10 +174,10 @@ func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
 
 // Download downloads downloads a single file from path and returns a byte array
 func Download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) {
-	var buffer []byte
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	var buffer []byte
 
 	switch srcPrefix {
 	case "k8s":
@@ -289,4 +230,51 @@ func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, buffer []
 		return fmt.Errorf(dstPrefix + " not implemented")
 	}
 	return nil
+}
+
+func initClient(ctx context.Context, existingClient interface{}, prefix, path, tested string) (interface{}, string, error) {
+	var newClient interface{}
+	switch prefix {
+	case "k8s":
+		if isTestedAndClientExists(prefix, tested, existingClient) {
+			newClient = existingClient
+			break
+		}
+		client, err := GetClientToK8s()
+		if err != nil {
+			return nil, "", err
+		}
+		newClient = client
+
+	case "s3":
+		if isTestedAndClientExists(prefix, tested, existingClient) {
+			newClient = existingClient
+			break
+		}
+		client, err := GetClientToS3(path)
+		if err != nil {
+			return nil, "", err
+		}
+		newClient = client
+
+	case "abs":
+		if isTestedAndClientExists(prefix, tested, existingClient) {
+			newClient = existingClient
+			break
+		}
+		client, err := GetClientToAbs(ctx, path)
+		if err != nil {
+			return nil, "", err
+		}
+		newClient = client
+
+	default:
+		return nil, "", fmt.Errorf(prefix + " not implemented")
+	}
+
+	return newClient, prefix, nil
+}
+
+func isTestedAndClientExists(prefix, tested string, client interface{}) bool {
+	return prefix == tested && client != nil
 }
