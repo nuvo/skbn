@@ -65,7 +65,7 @@ skbn cp \
     --dst k8s://<namespace>/<podName>/<containerName>/<path>
 ```
 
-## Parallel execution
+## Advanced usage
 
 ### Copy files from source to destination in parallel
 
@@ -75,7 +75,19 @@ skbn cp \
     --dst ... \
     --parallel <n>
 ```
-* n is number of files to be copied in parallel (for full parallelism use 0)
+* `n` is the number of files to be copied in parallel (for full parallelism use 0)
+
+### Set in memory buffer size
+
+Skbn copies files using an in-memory buffer. To control the buffer size:
+
+```
+skbn cp \
+    --src ... \
+    --dst ... \
+    --buffer-size <f>
+```
+* `f` is the in memory buffer size (in GB) to use for files copy. This flag should be used with caution when used in conjunction with `--parallel`
 
 ## Added bonus section
 

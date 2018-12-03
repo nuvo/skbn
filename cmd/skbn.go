@@ -49,7 +49,7 @@ func NewCpCmd(out io.Writer) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "cp",
-		Short: "Copy files or directories Kubernetes <--> S3 (and more?)",
+		Short: "Copy files or directories Kubernetes and Cloud storage",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := skbn.Copy(c.src, c.dst, c.parallel, c.bufferSize); err != nil {
