@@ -7,9 +7,9 @@ import (
 	"math"
 	"path/filepath"
 
+	"github.com/djherbis/buffer"
 	"github.com/nuvo/skbn/pkg/utils"
 
-	"gopkg.in/djherbis/buffer.v1"
 	"gopkg.in/djherbis/nio.v2"
 )
 
@@ -20,7 +20,7 @@ type FromToPair struct {
 }
 
 // Copy copies files from src to dst
-func Copy(src, dst string, parallel int) error {
+func Copy(src, dst string, parallel int, bufferSize float64) error {
 	srcPrefix, srcPath := utils.SplitInTwo(src, "://")
 	dstPrefix, dstPath := utils.SplitInTwo(dst, "://")
 
@@ -36,7 +36,7 @@ func Copy(src, dst string, parallel int) error {
 	if err != nil {
 		return err
 	}
-	err = PerformCopy(srcClient, dstClient, srcPrefix, dstPrefix, fromToPaths, parallel)
+	err = PerformCopy(srcClient, dstClient, srcPrefix, dstPrefix, fromToPaths, parallel, bufferSize)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func GetFromToPaths(srcClient interface{}, srcPrefix, srcPath, dstPath string) (
 }
 
 // PerformCopy performs the actual copy action
-func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, fromToPaths []FromToPair, parallel int) error {
+func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, fromToPaths []FromToPair, parallel int, bufferSize float64) error {
 
 	// Execute in parallel
 	totalFiles := len(fromToPaths)
@@ -119,9 +119,9 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 		currentLinePadded := utils.LeftPad2Len(currentLine, 0, totalDigits)
 
 		go func(srcClient, dstClient interface{}, srcPrefix, fromPath, dstPrefix, toPath, currentLinePadded string, totalFiles int) {
-			// pr, pw := io.Pipe()
 
-			buf := buffer.New(100 * 1024 * 1024) // 100MB In memory Buffer
+			newBufferSize := (int64)(bufferSize * 1024 * 1024 * 1024) // may not be super accurate
+			buf := buffer.New(newBufferSize)
 			pr, pw := nio.Pipe(buf)
 
 			log.Printf("[%s/%d] copy: %s -> %s", currentLinePadded, totalFiles, fromPath, toPath)
