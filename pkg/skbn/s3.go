@@ -1,13 +1,13 @@
 package skbn
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/nuvo/skbn/pkg/utils"
+	nio "gopkg.in/djherbis/nio.v2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -90,11 +90,11 @@ func GetListOfFilesFromS3(iClient interface{}, path string) ([]string, error) {
 }
 
 // DownloadFromS3 downloads a single file from S3
-func DownloadFromS3(iClient interface{}, path string) ([]byte, error) {
+func DownloadFromS3(iClient interface{}, path string, pw *nio.PipeWriter) error {
 	s := iClient.(*session.Session)
 	pSplit := strings.Split(path, "/")
 	if err := validateS3Path(pSplit); err != nil {
-		return nil, err
+		return err
 	}
 	bucket, s3Path := initS3Variables(pSplit)
 
@@ -113,20 +113,23 @@ func DownloadFromS3(iClient interface{}, path string) ([]byte, error) {
 			})
 		if err != nil {
 			if attempt == attempts {
-				return nil, err
+				return err
 			}
 			utils.Sleep(attempt)
 			continue
 		}
 
-		return buffer.Bytes(), nil
+		// this is a workaround
+		// we do not want to save the entire file to memory
+		pw.Write(buffer.Bytes())
+		return nil
 	}
 
-	return nil, nil
+	return nil
 }
 
 // UploadToS3 uploads a single file to S3
-func UploadToS3(iClient interface{}, toPath, fromPath string, buffer []byte) error {
+func UploadToS3(iClient interface{}, toPath, fromPath string, pr *nio.PipeReader) error {
 	s := iClient.(*session.Session)
 	pSplit := strings.Split(toPath, "/")
 	if err := validateS3Path(pSplit); err != nil {
@@ -148,7 +151,7 @@ func UploadToS3(iClient interface{}, toPath, fromPath string, buffer []byte) err
 		_, err := uploader.Upload(&s3manager.UploadInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(s3Path),
-			Body:   bytes.NewReader(buffer),
+			Body:   pr,
 		})
 		if err != nil {
 			if attempt == attempts {

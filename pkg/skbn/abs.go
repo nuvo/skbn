@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	nio "gopkg.in/djherbis/nio.v2"
 )
 
 var err error
@@ -160,37 +161,40 @@ func GetListOfFilesFromAbs(ctx context.Context, iClient interface{}, path string
 }
 
 // DownloadFromAbs downloads a single file from azure blob storage
-func DownloadFromAbs(ctx context.Context, iClient interface{}, path string) ([]byte, error) {
+func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, pw *nio.PipeWriter) error {
 	pSplit := strings.Split(path, "/")
 
 	if err := validateAbsPath(pSplit); err != nil {
-		return nil, err
+		return err
 	}
 	a, c, p := initAbsVariables(pSplit)
 	pl := iClient.(pipeline.Pipeline)
 	cu, err := getContainerURL(pl, a, c)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	bu := getBlobURL(cu, p)
 	dr, err := bu.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	bs := dr.Body(azblob.RetryReaderOptions{MaxRetryRequests: 20})
 	dd := bytes.Buffer{}
 	_, err = dd.ReadFrom(bs)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return dd.Bytes(), nil
+	// this is a workaround
+	// we do not want to save the entire file to memory
+	pw.Write(dd.Bytes())
+	return nil
 }
 
 // UploadToAbs uploads a single file to azure blob storage
-func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath string, buffer []byte) error {
+func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath string, pr *nio.PipeReader) error {
 	pSplit := strings.Split(toPath, "/")
 	if err := validateAbsPath(pSplit); err != nil {
 		return err
@@ -210,9 +214,10 @@ func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath stri
 
 	bu := getBlobURL(cu, p)
 
-	_, err = azblob.UploadBufferToBlockBlob(ctx, buffer, bu, azblob.UploadToBlockBlobOptions{
-		BlockSize:   4 * 1024 * 1024,
-		Parallelism: 16})
+	_, err = azblob.UploadStreamToBlockBlob(ctx, pr, bu, azblob.UploadStreamToBlockBlobOptions{
+		BufferSize: 4 * 1024 * 1024,
+		MaxBuffers: 16,
+	})
 	if err != nil {
 		return err
 	}

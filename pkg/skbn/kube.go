@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/nuvo/skbn/pkg/utils"
+	nio "gopkg.in/djherbis/nio.v2"
 
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -73,7 +74,8 @@ func GetListOfFilesFromK8s(iClient interface{}, path, findType, findName string)
 	for attempt < attempts {
 		attempt++
 
-		output, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
+		output := new(bytes.Buffer)
+		stderr, err := Exec(client, namespace, podName, containerName, command, nil, output)
 		if len(stderr) != 0 {
 			if attempt == attempts {
 				return nil, fmt.Errorf("STDERR: " + (string)(stderr))
@@ -89,7 +91,7 @@ func GetListOfFilesFromK8s(iClient interface{}, path, findType, findName string)
 			continue
 		}
 
-		lines := strings.Split((string)(output), "\n")
+		lines := strings.Split((string)(output.Bytes()), "\n")
 		var outLines []string
 		for _, line := range lines {
 			if line != "" {
@@ -104,11 +106,11 @@ func GetListOfFilesFromK8s(iClient interface{}, path, findType, findName string)
 }
 
 // DownloadFromK8s downloads a single file from Kubernetes
-func DownloadFromK8s(iClient interface{}, path string) ([]byte, error) {
+func DownloadFromK8s(iClient interface{}, path string, pw *nio.PipeWriter) error {
 	client := *iClient.(*K8sClient)
 	pSplit := strings.Split(path, "/")
 	if err := validateK8sPath(pSplit); err != nil {
-		return nil, err
+		return err
 	}
 	namespace, podName, containerName, pathToCopy := initK8sVariables(pSplit)
 	command := []string{"cat", pathToCopy}
@@ -118,26 +120,26 @@ func DownloadFromK8s(iClient interface{}, path string) ([]byte, error) {
 	for attempt < attempts {
 		attempt++
 
-		stdout, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
+		stderr, err := Exec(client, namespace, podName, containerName, command, nil, pw)
 		if attempt == attempts {
 			if len(stderr) != 0 {
-				return stdout, fmt.Errorf("STDERR: " + (string)(stderr))
+				return fmt.Errorf("STDERR: " + (string)(stderr))
 			}
 			if err != nil {
-				return stdout, err
+				return err
 			}
 		}
 		if err == nil {
-			return stdout, nil
+			return nil
 		}
 		utils.Sleep(attempt)
 	}
 
-	return nil, nil
+	return nil
 }
 
 // UploadToK8s uploads a single file to Kubernetes
-func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) error {
+func UploadToK8s(iClient interface{}, toPath, fromPath string, pr *nio.PipeReader) error {
 	client := *iClient.(*K8sClient)
 	pSplit := strings.Split(toPath, "/")
 	if err := validateK8sPath(pSplit); err != nil {
@@ -155,7 +157,7 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) er
 		attempt++
 		dir, _ := filepath.Split(pathToCopy)
 		command := []string{"mkdir", "-p", dir}
-		_, stderr, err := Exec(client, namespace, podName, containerName, command, nil)
+		stderr, err := Exec(client, namespace, podName, containerName, command, nil, nil)
 
 		if len(stderr) != 0 {
 			if attempt == attempts {
@@ -173,7 +175,7 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) er
 		}
 
 		command = []string{"touch", pathToCopy}
-		_, stderr, err = Exec(client, namespace, podName, containerName, command, nil)
+		stderr, err = Exec(client, namespace, podName, containerName, command, nil, nil)
 
 		if len(stderr) != 0 {
 			if attempt == attempts {
@@ -191,8 +193,7 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, buffer []byte) er
 		}
 
 		command = []string{"cp", "/dev/stdin", pathToCopy}
-		stdin := bytes.NewReader(buffer)
-		_, stderr, err = Exec(client, namespace, podName, containerName, command, readerWrapper{stdin})
+		stderr, err = Exec(client, namespace, podName, containerName, command, readerWrapper{pr}, nil)
 
 		if len(stderr) != 0 {
 			if attempt == attempts {
@@ -223,7 +224,7 @@ func (r readerWrapper) Read(p []byte) (int, error) {
 }
 
 // Exec executes a command in a given container
-func Exec(client K8sClient, namespace, podName, containerName string, command []string, stdin io.Reader) ([]byte, []byte, error) {
+func Exec(client K8sClient, namespace, podName, containerName string, command []string, stdin io.Reader, stdout io.Writer) ([]byte, error) {
 	clientset, config := client.ClientSet, client.Config
 
 	req := clientset.Core().RESTClient().Post().
@@ -233,7 +234,7 @@ func Exec(client K8sClient, namespace, podName, containerName string, command []
 		SubResource("exec")
 	scheme := runtime.NewScheme()
 	if err := core_v1.AddToScheme(scheme); err != nil {
-		return nil, nil, fmt.Errorf("error adding to scheme: %v", err)
+		return nil, fmt.Errorf("error adding to scheme: %v", err)
 	}
 
 	parameterCodec := runtime.NewParameterCodec(scheme)
@@ -241,28 +242,28 @@ func Exec(client K8sClient, namespace, podName, containerName string, command []
 		Command:   command,
 		Container: containerName,
 		Stdin:     stdin != nil,
-		Stdout:    true,
+		Stdout:    stdout != nil,
 		Stderr:    true,
 		TTY:       false,
 	}, parameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
-		return nil, nil, fmt.Errorf("error while creating Executor: %v", err)
+		return nil, fmt.Errorf("error while creating Executor: %v", err)
 	}
 
-	var stdout, stderr bytes.Buffer
+	var stderr bytes.Buffer
 	err = exec.Stream(remotecommand.StreamOptions{
 		Stdin:  stdin,
-		Stdout: &stdout,
+		Stdout: stdout,
 		Stderr: &stderr,
 		Tty:    false,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("error in Stream: %v", err)
+		return nil, fmt.Errorf("error in Stream: %v", err)
 	}
 
-	return stdout.Bytes(), stderr.Bytes(), nil
+	return stderr.Bytes(), nil
 }
 
 func validateK8sPath(pathSplit []string) error {

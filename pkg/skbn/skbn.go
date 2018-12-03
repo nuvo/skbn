@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/nuvo/skbn/pkg/utils"
+
+	"gopkg.in/djherbis/buffer.v1"
+	"gopkg.in/djherbis/nio.v2"
 )
 
 // FromToPair is a pair of FromPath and ToPath
@@ -116,23 +119,30 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 		currentLinePadded := utils.LeftPad2Len(currentLine, 0, totalDigits)
 
 		go func(srcClient, dstClient interface{}, srcPrefix, fromPath, dstPrefix, toPath, currentLinePadded string, totalFiles int) {
-			buffer, err := Download(srcClient, srcPrefix, fromPath)
-			if err != nil {
-				bwg.Done()
-				log.Fatal(err, fmt.Sprintf(" src: file: %s", fromPath))
-				return
-			}
-			log.Println(fmt.Sprintf("file [%s/%d] src: %s", currentLinePadded, totalFiles, fromPath))
+			// pr, pw := io.Pipe()
 
-			err = Upload(dstClient, dstPrefix, toPath, fromPath, buffer)
-			if err != nil {
-				bwg.Done()
-				log.Fatal(err, fmt.Sprintf(" dst: file: %s", toPath))
-				return
-			}
-			log.Println(fmt.Sprintf("file [%s/%d] dst: %s", currentLinePadded, totalFiles, toPath))
+			buf := buffer.New(100 * 1024 * 1024) // 100MB In memory Buffer
+			pr, pw := nio.Pipe(buf)
 
-			bwg.Done()
+			log.Printf("[%s/%d] copy: %s -> %s", currentLinePadded, totalFiles, fromPath, toPath)
+
+			go func() {
+				defer pw.Close()
+				err := Download(srcClient, srcPrefix, fromPath, pw)
+				if err != nil {
+					log.Fatal(err, fmt.Sprintf(" src: file: %s", fromPath))
+				}
+			}()
+
+			go func() {
+				defer pr.Close()
+				defer bwg.Done()
+				defer log.Printf("[%s/%d] done: %s -> %s", currentLinePadded, totalFiles, fromPath, toPath)
+				err := Upload(dstClient, dstPrefix, toPath, fromPath, pr)
+				if err != nil {
+					log.Fatal(err, fmt.Sprintf(" dst: file: %s", toPath))
+				}
+			}()
 		}(srcClient, dstClient, srcPrefix, ftp.FromPath, dstPrefix, ftp.ToPath, currentLinePadded, totalFiles)
 	}
 	bwg.Wait()
@@ -173,56 +183,51 @@ func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
 }
 
 // Download downloads downloads a single file from path and returns a byte array
-func Download(srcClient interface{}, srcPrefix, srcPath string) ([]byte, error) {
+func Download(srcClient interface{}, srcPrefix, srcPath string, pw *nio.PipeWriter) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var buffer []byte
-
 	switch srcPrefix {
 	case "k8s":
-		bytes, err := DownloadFromK8s(srcClient, srcPath)
+		err := DownloadFromK8s(srcClient, srcPath, pw)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		buffer = bytes
 	case "s3":
-		bytes, err := DownloadFromS3(srcClient, srcPath)
+		err := DownloadFromS3(srcClient, srcPath, pw)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		buffer = bytes
 	case "abs":
-		bytes, err := DownloadFromAbs(ctx, srcClient, srcPath)
+		err := DownloadFromAbs(ctx, srcClient, srcPath, pw)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		buffer = bytes
 	default:
-		return nil, fmt.Errorf(srcPrefix + " not implemented")
+		return fmt.Errorf(srcPrefix + " not implemented")
 	}
 
-	return buffer, nil
+	return nil
 }
 
 // Upload uploads a single file provided as a byte array to path
-func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, buffer []byte) error {
+func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, pr *nio.PipeReader) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	switch dstPrefix {
 	case "k8s":
-		err := UploadToK8s(dstClient, dstPath, srcPath, buffer)
+		err := UploadToK8s(dstClient, dstPath, srcPath, pr)
 		if err != nil {
 			return err
 		}
 	case "s3":
-		err := UploadToS3(dstClient, dstPath, srcPath, buffer)
+		err := UploadToS3(dstClient, dstPath, srcPath, pr)
 		if err != nil {
 			return err
 		}
 	case "abs":
-		err := UploadToAbs(ctx, dstClient, dstPath, srcPath, buffer)
+		err := UploadToAbs(ctx, dstClient, dstPath, srcPath, pr)
 		if err != nil {
 			return err
 		}
