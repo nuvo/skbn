@@ -103,10 +103,10 @@ func DownloadFromS3(iClient interface{}, path string, pw *nio.PipeWriter) error 
 	for attempt < attempts {
 		attempt++
 
-		buffer := &aws.WriteAtBuffer{}
 		downloader := s3manager.NewDownloader(s)
+		downloader.Concurrency = 1 // support PipeWriterWrapper
 
-		_, err := downloader.Download(buffer,
+		_, err := downloader.Download(pipeWriterWrapper{pw},
 			&s3.GetObjectInput{
 				Bucket: aws.String(bucket),
 				Key:    aws.String(s3Path),
@@ -118,14 +118,18 @@ func DownloadFromS3(iClient interface{}, path string, pw *nio.PipeWriter) error 
 			utils.Sleep(attempt)
 			continue
 		}
-
-		// this is a workaround
-		// we do not want to save the entire file to memory
-		pw.Write(buffer.Bytes())
 		return nil
 	}
 
 	return nil
+}
+
+type pipeWriterWrapper struct {
+	pw *nio.PipeWriter
+}
+
+func (pww pipeWriterWrapper) WriteAt(p []byte, off int64) (n int, err error) {
+	return pww.pw.Write(p)
 }
 
 // UploadToS3 uploads a single file to S3
