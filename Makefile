@@ -8,7 +8,7 @@ DOCKER_USER := $(shell printenv DOCKER_USER)
 DOCKER_PASSWORD := $(shell printenv DOCKER_PASSWORD)
 TRAVIS := $(shell printenv TRAVIS)
 
-all: bootstrap build
+all: bootstrap build docker push
 
 fmt:
 	go fmt ./pkg/... ./cmd/...
