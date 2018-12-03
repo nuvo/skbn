@@ -124,7 +124,7 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 			buf := buffer.New(newBufferSize)
 			pr, pw := nio.Pipe(buf)
 
-			log.Printf("[%s/%d] copy: %s -> %s", currentLinePadded, totalFiles, fromPath, toPath)
+			log.Printf("[%s/%d] copy: %s://%s -> %s://%s", currentLinePadded, totalFiles, srcPrefix, fromPath, dstPrefix, toPath)
 
 			go func() {
 				defer pw.Close()
