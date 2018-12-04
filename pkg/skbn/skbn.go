@@ -120,7 +120,7 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 
 		go func(srcClient, dstClient interface{}, srcPrefix, fromPath, dstPrefix, toPath, currentLinePadded string, totalFiles int) {
 
-			newBufferSize := (int64)(bufferSize * 1024 * 1024 * 1024) // may not be super accurate
+			newBufferSize := (int64)(bufferSize * 1024 * 1024) // may not be super accurate
 			buf := buffer.New(newBufferSize)
 			pr, pw := nio.Pipe(buf)
 

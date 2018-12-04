@@ -7,6 +7,7 @@
 # Skbn
 
 Skbn is a tool for copying files and directories between Kubernetes and cloud storage providers. It is named after the 1981 video game [Sokoban](https://en.wikipedia.org/wiki/Sokoban).
+Skbn uses an in-memory buffer for the copy process, to avoid excessive memory consumption.
 Skbn currently supports the following providers:
 
 * AWS S3
@@ -77,7 +78,7 @@ skbn cp \
 ```
 * `n` is the number of files to be copied in parallel (for full parallelism use 0)
 
-### Set in memory buffer size
+### Set in-memory buffer size
 
 Skbn copies files using an in-memory buffer. To control the buffer size:
 
@@ -87,7 +88,8 @@ skbn cp \
     --dst ... \
     --buffer-size <f>
 ```
-* `f` is the in memory buffer size (in GB) to use for files copy. This flag should be used with caution when used in conjunction with `--parallel`
+* `f` is the in-memory buffer size (in MB) to use for files copy. This flag should be used with caution when used in conjunction with `--parallel`
+* The default value for `buffer-size` is 6.75 MB, and was decided based on benchmark
 
 ## Added bonus section
 
