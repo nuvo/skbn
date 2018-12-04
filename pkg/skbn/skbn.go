@@ -3,6 +3,7 @@ package skbn
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"path/filepath"
@@ -209,24 +210,24 @@ func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
 	return relativePaths, nil
 }
 
-// Download downloads downloads a single file from path and returns a byte array
-func Download(srcClient interface{}, srcPrefix, srcPath string, pw *nio.PipeWriter) error {
+// Download downloads a single file from path into an io.Writer
+func Download(srcClient interface{}, srcPrefix, srcPath string, writer io.Writer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	switch srcPrefix {
 	case "k8s":
-		err := DownloadFromK8s(srcClient, srcPath, pw)
+		err := DownloadFromK8s(srcClient, srcPath, writer)
 		if err != nil {
 			return err
 		}
 	case "s3":
-		err := DownloadFromS3(srcClient, srcPath, pw)
+		err := DownloadFromS3(srcClient, srcPath, writer)
 		if err != nil {
 			return err
 		}
 	case "abs":
-		err := DownloadFromAbs(ctx, srcClient, srcPath, pw)
+		err := DownloadFromAbs(ctx, srcClient, srcPath, writer)
 		if err != nil {
 			return err
 		}
@@ -237,24 +238,24 @@ func Download(srcClient interface{}, srcPrefix, srcPath string, pw *nio.PipeWrit
 	return nil
 }
 
-// Upload uploads a single file provided as a byte array to path
-func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, pr *nio.PipeReader) error {
+// Upload uploads a single file provided as an io.Reader array to path
+func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, reader io.Reader) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	switch dstPrefix {
 	case "k8s":
-		err := UploadToK8s(dstClient, dstPath, srcPath, pr)
+		err := UploadToK8s(dstClient, dstPath, srcPath, reader)
 		if err != nil {
 			return err
 		}
 	case "s3":
-		err := UploadToS3(dstClient, dstPath, srcPath, pr)
+		err := UploadToS3(dstClient, dstPath, srcPath, reader)
 		if err != nil {
 			return err
 		}
 	case "abs":
-		err := UploadToAbs(ctx, dstClient, dstPath, srcPath, pr)
+		err := UploadToAbs(ctx, dstClient, dstPath, srcPath, reader)
 		if err != nil {
 			return err
 		}
