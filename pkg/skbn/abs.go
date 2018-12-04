@@ -12,7 +12,6 @@ import (
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	// "github.com/Azure/azure-sdk-for-go/storage"
 )
 
 var err error
