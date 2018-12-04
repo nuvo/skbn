@@ -145,6 +145,7 @@ Skbn tries to get credentials in the following order:
 ### AWS
 
 Skbn uses the default AWS [credentials chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html).
+In addition, the `AWS_REGION` environment variable should be set (default is `eu-central-1`).
 
 ### Azure Blob Storage
 

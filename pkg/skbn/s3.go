@@ -2,12 +2,12 @@ package skbn
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/nuvo/skbn/pkg/utils"
-	nio "gopkg.in/djherbis/nio.v2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -90,7 +90,7 @@ func GetListOfFilesFromS3(iClient interface{}, path string) ([]string, error) {
 }
 
 // DownloadFromS3 downloads a single file from S3
-func DownloadFromS3(iClient interface{}, path string, pw *nio.PipeWriter) error {
+func DownloadFromS3(iClient interface{}, path string, writer io.Writer) error {
 	s := iClient.(*session.Session)
 	pSplit := strings.Split(path, "/")
 	if err := validateS3Path(pSplit); err != nil {
@@ -104,9 +104,9 @@ func DownloadFromS3(iClient interface{}, path string, pw *nio.PipeWriter) error 
 		attempt++
 
 		downloader := s3manager.NewDownloader(s)
-		downloader.Concurrency = 1 // support PipeWriterWrapper
+		downloader.Concurrency = 1 // support writerWrapper
 
-		_, err := downloader.Download(pipeWriterWrapper{pw},
+		_, err := downloader.Download(writerWrapper{writer},
 			&s3.GetObjectInput{
 				Bucket: aws.String(bucket),
 				Key:    aws.String(s3Path),
@@ -124,16 +124,16 @@ func DownloadFromS3(iClient interface{}, path string, pw *nio.PipeWriter) error 
 	return nil
 }
 
-type pipeWriterWrapper struct {
-	pw *nio.PipeWriter
+type writerWrapper struct {
+	w io.Writer
 }
 
-func (pww pipeWriterWrapper) WriteAt(p []byte, off int64) (n int, err error) {
-	return pww.pw.Write(p)
+func (ww writerWrapper) WriteAt(p []byte, off int64) (n int, err error) {
+	return ww.w.Write(p)
 }
 
 // UploadToS3 uploads a single file to S3
-func UploadToS3(iClient interface{}, toPath, fromPath string, pr *nio.PipeReader) error {
+func UploadToS3(iClient interface{}, toPath, fromPath string, reader io.Reader) error {
 	s := iClient.(*session.Session)
 	pSplit := strings.Split(toPath, "/")
 	if err := validateS3Path(pSplit); err != nil {
@@ -155,7 +155,7 @@ func UploadToS3(iClient interface{}, toPath, fromPath string, pr *nio.PipeReader
 		_, err := uploader.Upload(&s3manager.UploadInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(s3Path),
-			Body:   pr,
+			Body:   reader,
 		})
 		if err != nil {
 			if attempt == attempts {
@@ -171,8 +171,12 @@ func UploadToS3(iClient interface{}, toPath, fromPath string, pr *nio.PipeReader
 }
 
 func getNewSession() (*session.Session, error) {
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "eu-central-1"
+	}
 	s, err := session.NewSession(&aws.Config{
-		Region: aws.String(os.Getenv("AWS_REGION")),
+		Region: aws.String(region),
 	})
 
 	return s, err

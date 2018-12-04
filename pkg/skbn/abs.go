@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	nio "gopkg.in/djherbis/nio.v2"
 )
 
 var err error
@@ -161,7 +161,7 @@ func GetListOfFilesFromAbs(ctx context.Context, iClient interface{}, path string
 }
 
 // DownloadFromAbs downloads a single file from azure blob storage
-func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, pw *nio.PipeWriter) error {
+func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, writer io.Writer) error {
 	pSplit := strings.Split(path, "/")
 
 	if err := validateAbsPath(pSplit); err != nil {
@@ -189,12 +189,12 @@ func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, pw *
 
 	// this is a workaround
 	// we do not want to save the entire file to memory
-	pw.Write(dd.Bytes())
+	writer.Write(dd.Bytes())
 	return nil
 }
 
 // UploadToAbs uploads a single file to azure blob storage
-func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath string, pr *nio.PipeReader) error {
+func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath string, reader io.Reader) error {
 	pSplit := strings.Split(toPath, "/")
 	if err := validateAbsPath(pSplit); err != nil {
 		return err
@@ -214,7 +214,7 @@ func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath stri
 
 	bu := getBlobURL(cu, p)
 
-	_, err = azblob.UploadStreamToBlockBlob(ctx, pr, bu, azblob.UploadStreamToBlockBlobOptions{
+	_, err = azblob.UploadStreamToBlockBlob(ctx, reader, bu, azblob.UploadStreamToBlockBlobOptions{
 		BufferSize: 4 * 1024 * 1024,
 		MaxBuffers: 16,
 	})

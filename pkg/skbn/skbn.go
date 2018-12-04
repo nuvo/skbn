@@ -7,9 +7,9 @@ import (
 	"math"
 	"path/filepath"
 
-	"github.com/djherbis/buffer"
 	"github.com/nuvo/skbn/pkg/utils"
 
+	"github.com/djherbis/buffer"
 	"gopkg.in/djherbis/nio.v2"
 )
 

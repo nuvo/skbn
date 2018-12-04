@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/nuvo/skbn/pkg/utils"
-	nio "gopkg.in/djherbis/nio.v2"
 
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -106,7 +105,7 @@ func GetListOfFilesFromK8s(iClient interface{}, path, findType, findName string)
 }
 
 // DownloadFromK8s downloads a single file from Kubernetes
-func DownloadFromK8s(iClient interface{}, path string, pw *nio.PipeWriter) error {
+func DownloadFromK8s(iClient interface{}, path string, writer io.Writer) error {
 	client := *iClient.(*K8sClient)
 	pSplit := strings.Split(path, "/")
 	if err := validateK8sPath(pSplit); err != nil {
@@ -120,7 +119,7 @@ func DownloadFromK8s(iClient interface{}, path string, pw *nio.PipeWriter) error
 	for attempt < attempts {
 		attempt++
 
-		stderr, err := Exec(client, namespace, podName, containerName, command, nil, pw)
+		stderr, err := Exec(client, namespace, podName, containerName, command, nil, writer)
 		if attempt == attempts {
 			if len(stderr) != 0 {
 				return fmt.Errorf("STDERR: " + (string)(stderr))
@@ -139,7 +138,7 @@ func DownloadFromK8s(iClient interface{}, path string, pw *nio.PipeWriter) error
 }
 
 // UploadToK8s uploads a single file to Kubernetes
-func UploadToK8s(iClient interface{}, toPath, fromPath string, pr *nio.PipeReader) error {
+func UploadToK8s(iClient interface{}, toPath, fromPath string, reader io.Reader) error {
 	client := *iClient.(*K8sClient)
 	pSplit := strings.Split(toPath, "/")
 	if err := validateK8sPath(pSplit); err != nil {
@@ -193,7 +192,7 @@ func UploadToK8s(iClient interface{}, toPath, fromPath string, pr *nio.PipeReade
 		}
 
 		command = []string{"cp", "/dev/stdin", pathToCopy}
-		stderr, err = Exec(client, namespace, podName, containerName, command, readerWrapper{pr}, nil)
+		stderr, err = Exec(client, namespace, podName, containerName, command, readerWrapper{reader}, nil)
 
 		if len(stderr) != 0 {
 			if attempt == attempts {
