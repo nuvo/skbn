@@ -90,7 +90,7 @@ func GetListOfFilesFromK8s(iClient interface{}, path, findType, findName string)
 			continue
 		}
 
-		lines := strings.Split((string)(output.Bytes()), "\n")
+		lines := strings.Split(output.String(), "\n")
 		var outLines []string
 		for _, line := range lines {
 			if line != "" {
