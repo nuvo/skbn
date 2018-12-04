@@ -1,7 +1,6 @@
 package skbn
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -169,32 +168,6 @@ func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, writ
 		return err
 	}
 	a, c, p := initAbsVariables(pSplit)
-
-	// Section to be tested - START
-
-	// If this works (or a similar version of it)
-	// we can replace the entire "Section to be replaced"
-	// this acheiving a stream from ABS
-	// To make this work - uncomment the 'storage' import
-	// References:
-	// https://medium.com/@matryer/introducing-stow-cloud-storage-abstraction-package-for-go-20cf2928d93c
-	// https://github.com/graymeta/stow/blob/master/azure/item.go#L46
-
-	// var client storage.BlobStorageClient
-	// reader, err := client.GetContainerReference(c).GetBlobReference(p).Get(nil)
-	// defer reader.Close()
-	// if err != nil {
-	// 	return err
-	// }
-	// _, err = io.Copy(writer, reader)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// Section to be tested - END
-
-	// Section to be replaced - START
-
 	pl := iClient.(pipeline.Pipeline)
 	cu, err := getContainerURL(pl, a, c)
 	if err != nil {
@@ -208,16 +181,11 @@ func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, writ
 	}
 
 	bs := dr.Body(azblob.RetryReaderOptions{MaxRetryRequests: 20})
-	dd := bytes.Buffer{}
-	_, err = dd.ReadFrom(bs)
+	defer bs.Close()
+	_, err = io.Copy(writer, bs)
 	if err != nil {
 		return err
 	}
-
-	// this is a workaround - we do not want to save the entire file to memory
-	writer.Write(dd.Bytes())
-
-	// Section to be replaced - END
 
 	return nil
 }
