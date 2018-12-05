@@ -14,96 +14,6 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
-var err error
-
-func validateAbsPath(pathSplit []string) error {
-	if len(pathSplit) >= 1 {
-		return nil
-	}
-	return fmt.Errorf("illegal path: %s", filepath.Join(pathSplit...))
-}
-
-func initAbsVariables(split []string) (string, string, string) {
-	account := split[0]
-	container := split[1]
-	path := filepath.Join(split[2:]...)
-
-	return account, container, path
-}
-
-func getNewPipeline() (pipeline.Pipeline, error) {
-	accountName, accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT"), os.Getenv("AZURE_STORAGE_ACCESS_KEY")
-
-	if len(accountName) == 0 {
-		return nil, fmt.Errorf("AZURE_STORAGE_ACCOUNT environment variable is not set")
-	}
-	if len(accountKey) == 0 {
-		return nil, fmt.Errorf("AZURE_STORAGE_ACCESS_KEY environment variable is not set")
-	}
-
-	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
-	if err != nil {
-		return nil, err
-	}
-
-	po := azblob.PipelineOptions{
-		Retry: azblob.RetryOptions{
-			Policy:        azblob.RetryPolicyExponential,
-			MaxTries:      3,
-			TryTimeout:    time.Second * 3,
-			RetryDelay:    time.Second * 1,
-			MaxRetryDelay: time.Second * 3,
-		},
-	}
-
-	pl := azblob.NewPipeline(credential, po)
-
-	return pl, nil
-}
-
-func getServiceURL(pl pipeline.Pipeline, accountName string) (azblob.ServiceURL, error) {
-	URL, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/", accountName))
-	if err != nil {
-		return azblob.ServiceURL{}, err
-	}
-
-	surl := azblob.NewServiceURL(*URL, pl)
-	return surl, nil
-}
-
-func getContainerURL(pl pipeline.Pipeline, accountName string, containerName string) (azblob.ContainerURL, error) {
-	URL, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName))
-	if err != nil {
-		return azblob.ContainerURL{}, err
-	}
-
-	curl := azblob.NewContainerURL(*URL, pl)
-	return curl, nil
-}
-
-func getBlobURL(curl azblob.ContainerURL, blob string) azblob.BlockBlobURL {
-	return curl.NewBlockBlobURL(blob)
-}
-
-func listContainers(ctx context.Context, surl azblob.ServiceURL) ([]azblob.ContainerItem, error) {
-	lc, err := surl.ListContainersSegment(ctx, azblob.Marker{}, azblob.ListContainersSegmentOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return lc.ContainerItems, nil
-}
-
-func containerExists(list []azblob.ContainerItem, containerName string) bool {
-	exists := false
-	for _, v := range list {
-		if containerName == v.Name {
-			exists = true
-		}
-	}
-	return exists
-}
-
 // GetClientToAbs checks the connection to azure blob storage and returns the tested client (pipeline)
 func GetClientToAbs(ctx context.Context, path string) (pipeline.Pipeline, error) {
 	pSplit := strings.Split(path, "/")
@@ -219,4 +129,92 @@ func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath stri
 	}
 
 	return nil
+}
+
+func validateAbsPath(pathSplit []string) error {
+	if len(pathSplit) >= 1 {
+		return nil
+	}
+	return fmt.Errorf("illegal path: %s", filepath.Join(pathSplit...))
+}
+
+func initAbsVariables(split []string) (string, string, string) {
+	account := split[0]
+	container := split[1]
+	path := filepath.Join(split[2:]...)
+
+	return account, container, path
+}
+
+func getNewPipeline() (pipeline.Pipeline, error) {
+	accountName, accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT"), os.Getenv("AZURE_STORAGE_ACCESS_KEY")
+
+	if len(accountName) == 0 {
+		return nil, fmt.Errorf("AZURE_STORAGE_ACCOUNT environment variable is not set")
+	}
+	if len(accountKey) == 0 {
+		return nil, fmt.Errorf("AZURE_STORAGE_ACCESS_KEY environment variable is not set")
+	}
+
+	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		return nil, err
+	}
+
+	po := azblob.PipelineOptions{
+		Retry: azblob.RetryOptions{
+			Policy:        azblob.RetryPolicyExponential,
+			MaxTries:      3,
+			TryTimeout:    time.Second * 3,
+			RetryDelay:    time.Second * 1,
+			MaxRetryDelay: time.Second * 3,
+		},
+	}
+
+	pl := azblob.NewPipeline(credential, po)
+
+	return pl, nil
+}
+
+func getServiceURL(pl pipeline.Pipeline, accountName string) (azblob.ServiceURL, error) {
+	URL, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/", accountName))
+	if err != nil {
+		return azblob.ServiceURL{}, err
+	}
+
+	surl := azblob.NewServiceURL(*URL, pl)
+	return surl, nil
+}
+
+func getContainerURL(pl pipeline.Pipeline, accountName string, containerName string) (azblob.ContainerURL, error) {
+	URL, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName))
+	if err != nil {
+		return azblob.ContainerURL{}, err
+	}
+
+	curl := azblob.NewContainerURL(*URL, pl)
+	return curl, nil
+}
+
+func getBlobURL(curl azblob.ContainerURL, blob string) azblob.BlockBlobURL {
+	return curl.NewBlockBlobURL(blob)
+}
+
+func listContainers(ctx context.Context, surl azblob.ServiceURL) ([]azblob.ContainerItem, error) {
+	lc, err := surl.ListContainersSegment(ctx, azblob.Marker{}, azblob.ListContainersSegmentOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return lc.ContainerItems, nil
+}
+
+func containerExists(list []azblob.ContainerItem, containerName string) bool {
+	exists := false
+	for _, v := range list {
+		if containerName == v.Name {
+			exists = true
+		}
+	}
+	return exists
 }
