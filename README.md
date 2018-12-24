@@ -91,6 +91,18 @@ skbn cp \
 * `f` is the in-memory buffer size (in MB) to use for files copy. This flag should be used with caution when used in conjunction with `--parallel`
 * The default value for `buffer-size` is 6.75 MB, and was decided based on benchmark
 
+### Minio S3 support
+
+Skbn supports file copy from and to a Minio S3 endpoint. To let skbn know how your minio is configured, you can set the following environment variables:
+
+```
+AWS_ACCESS_KEY_ID=<your username>
+AWS_SECRET_ACCESS_KEY=<your password>
+AWS_S3_ENDPOINT=http(s)://<host>:<port>
+AWS_S3_NO_SSL=true # disables SSL
+AWS_S3_FORCE_PATH_STYLE=true # enforce path style bucket access
+```
+
 ## Added bonus section
 
 ### Copy files from S3 to Azure Blob Storage
