@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"strconv"
+	"strings"
 
 	"github.com/nuvo/skbn/pkg/utils"
 
@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 // GetClientToS3 checks the connection to S3 and returns the tested client
@@ -174,39 +173,31 @@ func UploadToS3(iClient interface{}, toPath, fromPath string, reader io.Reader) 
 
 func getNewSession() (*session.Session, error) {
 
+	awsConfig := &aws.Config{}
+
 	region := "eu-central-1"
-    if rg := os.Getenv("AWS_REGION"); rg != "" {
-        region = rg
-    }
+	
+	if rg := os.Getenv("AWS_REGION"); rg != "" {
+		region = rg
+	}
 
-    endpoint := ""
-    if endp := os.Getenv("AWS_S3_ENDPOINT"); endp != "" {
-        endpoint = endp
-    } else {    
-        resolver := endpoints.DefaultResolver()
-        resolvedEndpoint, _ := resolver.EndpointFor(endpoints.S3ServiceID, region)
-        /*if err != nil {
-            return fmt.Errorf("failed to resolve endpoint for given region: %s", region)
-        }*/
-        endpoint = resolvedEndpoint.URL
-    }
+	awsConfig.Region = aws.String(region)
+    
+	if endpoint := os.Getenv("AWS_S3_ENDPOINT"); endpoint != "" {
+		awsConfig.Endpoint = aws.String(endpoint)
+	}
 
-	disableSSL := false
-    if disSSL := os.Getenv("AWS_S3_NO_SSL"); disSSL != "" {
-        disableSSL, _ = strconv.ParseBool(disSSL)
-    }
+	if disSSL := os.Getenv("AWS_S3_NO_SSL"); disSSL != "" {
+		disableSSL, _ := strconv.ParseBool(disSSL)
+		awsConfig.DisableSSL = aws.Bool(disableSSL)
+	}
 
-	forcePathStyle := false
-    if fps := os.Getenv("AWS_S3_FORCE_PATH_STYLE"); fps != "" {
-        forcePathStyle, _ = strconv.ParseBool(fps)
-    }
+	if fps := os.Getenv("AWS_S3_FORCE_PATH_STYLE"); fps != "" {
+		forcePathStyle, _ := strconv.ParseBool(fps)
+		awsConfig.S3ForcePathStyle = aws.Bool(forcePathStyle)
+	}
 
-	s, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
-		Endpoint: aws.String(endpoint),
-		DisableSSL: aws.Bool(disableSSL),
-		S3ForcePathStyle: aws.Bool(forcePathStyle),
-	})
+	s, err := session.NewSession(awsConfig)
 
 	return s, err
 }
