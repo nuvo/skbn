@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"strconv"
 
 	"github.com/nuvo/skbn/pkg/utils"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 // GetClientToS3 checks the connection to S3 and returns the tested client
@@ -171,12 +173,39 @@ func UploadToS3(iClient interface{}, toPath, fromPath string, reader io.Reader) 
 }
 
 func getNewSession() (*session.Session, error) {
-	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		region = "eu-central-1"
-	}
+
+	region := "eu-central-1"
+    if rg := os.Getenv("AWS_REGION"); rg != "" {
+        region = rg
+    }
+
+    endpoint := ""
+    if endp := os.Getenv("AWS_S3_ENDPOINT"); endp != "" {
+        endpoint = endp
+    } else {    
+        resolver := endpoints.DefaultResolver()
+        resolvedEndpoint, _ := resolver.EndpointFor(endpoints.S3ServiceID, region)
+        /*if err != nil {
+            return fmt.Errorf("failed to resolve endpoint for given region: %s", region)
+        }*/
+        endpoint = resolvedEndpoint.URL
+    }
+
+	disableSSL := false
+    if disSSL := os.Getenv("AWS_S3_NO_SSL"); disSSL != "" {
+        disableSSL, _ = strconv.ParseBool(disSSL)
+    }
+
+	forcePathStyle := false
+    if fps := os.Getenv("AWS_S3_FORCE_PATH_STYLE"); fps != "" {
+        forcePathStyle, _ = strconv.ParseBool(fps)
+    }
+
 	s, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
+		Endpoint: aws.String(endpoint),
+		DisableSSL: aws.Bool(disableSSL),
+		S3ForcePathStyle: aws.Bool(forcePathStyle),
 	})
 
 	return s, err
