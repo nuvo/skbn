@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/nuvo/skbn/pkg/utils"
@@ -171,13 +172,32 @@ func UploadToS3(iClient interface{}, toPath, fromPath string, reader io.Reader) 
 }
 
 func getNewSession() (*session.Session, error) {
-	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		region = "eu-central-1"
+
+	awsConfig := &aws.Config{}
+
+	region := "eu-central-1"
+	
+	if rg := os.Getenv("AWS_REGION"); rg != "" {
+		region = rg
 	}
-	s, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	})
+
+	awsConfig.Region = aws.String(region)
+    
+	if endpoint := os.Getenv("AWS_S3_ENDPOINT"); endpoint != "" {
+		awsConfig.Endpoint = aws.String(endpoint)
+	}
+
+	if disSSL := os.Getenv("AWS_S3_NO_SSL"); disSSL != "" {
+		disableSSL, _ := strconv.ParseBool(disSSL)
+		awsConfig.DisableSSL = aws.Bool(disableSSL)
+	}
+
+	if fps := os.Getenv("AWS_S3_FORCE_PATH_STYLE"); fps != "" {
+		forcePathStyle, _ := strconv.ParseBool(fps)
+		awsConfig.S3ForcePathStyle = aws.Bool(forcePathStyle)
+	}
+
+	s, err := session.NewSession(awsConfig)
 
 	return s, err
 }
