@@ -176,13 +176,13 @@ func getNewSession() (*session.Session, error) {
 	awsConfig := &aws.Config{}
 
 	region := "eu-central-1"
-	
+
 	if rg := os.Getenv("AWS_REGION"); rg != "" {
 		region = rg
 	}
 
 	awsConfig.Region = aws.String(region)
-    
+
 	if endpoint := os.Getenv("AWS_S3_ENDPOINT"); endpoint != "" {
 		awsConfig.Endpoint = aws.String(endpoint)
 	}
