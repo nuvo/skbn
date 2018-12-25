@@ -11,6 +11,7 @@ Skbn uses an in-memory buffer for the copy process, to avoid excessive memory co
 Skbn currently supports the following providers:
 
 * AWS S3
+* Minio S3
 * Azure Blob Storage
 
 ## Install
