@@ -61,33 +61,22 @@ func GetListOfFilesFromS3(iClient interface{}, path string) ([]string, error) {
 	}
 	bucket, s3Path := initS3Variables(pSplit)
 
-	attempts := 3
-	attempt := 0
-	for attempt < attempts {
-		attempt++
-
-		objectOutput, err := s3.New(s).ListObjects(&s3.ListObjectsInput{
-			Bucket: aws.String(bucket),
-			Prefix: aws.String(s3Path),
-		})
-		if err != nil {
-			if attempt == attempts {
-				return nil, err
-			}
-			utils.Sleep(attempt)
-			continue
-		}
-
-		var outLines []string
-		for _, content := range objectOutput.Contents {
-			line := *content.Key
+	var outLines []string
+	err := s3.New(s).ListObjectsPages(&s3.ListObjectsInput{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(s3Path),
+	}, func(p *s3.ListObjectsOutput, last bool) (shouldContinue bool) {
+		for _, obj := range p.Contents {
+			line := *obj.Key
 			outLines = append(outLines, strings.Replace(line, s3Path, "", 1))
 		}
-
-		return outLines, nil
+		return true
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, nil
+	return outLines, nil
 }
 
 // DownloadFromS3 downloads a single file from S3
