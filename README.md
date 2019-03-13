@@ -13,6 +13,7 @@ Skbn currently supports the following providers:
 * AWS S3
 * Minio S3
 * Azure Blob Storage
+* Google Cloud Storage
 
 ## Install
 
@@ -65,6 +66,14 @@ skbn cp \
 skbn cp \
     --src abs://<account>/<container>/<path> \
     --dst k8s://<namespace>/<podName>/<containerName>/<path>
+```
+
+### Copy files from Kubernetes to Google Cloud Storage
+
+```
+skbn cp \
+    --src k8s://<namespace>/<podName>/<containerName>/<path> \
+    --dst gcs://<bucket>/<path>
 ```
 
 ## Advanced usage
@@ -165,6 +174,11 @@ In addition, the `AWS_REGION` environment variable should be set (default is `eu
 ### Azure Blob Storage
 
 Skbn uses `AZURE_STORAGE_ACCOUNT` and `AZURE_STORAGE_ACCESS_KEY` environment variables for authentication.
+
+### Google Cloud Storage
+
+Skbn uses Google [Application Default Credentials](https://cloud.google.com/docs/authentication/production). 
+Basically, it will first look for the `GOOGLE_APPLICATION_CREDENTIALS` environment variable. If it is not defined, it will look for the default service account, or throw an error if none is configured. 
 
 ## Examples
 
