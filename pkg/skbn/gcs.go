@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"skbn/pkg/utils"
+	"github.com/nuvo/skbn/pkg/utils"
 
 	"cloud.google.com/go/storage"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
