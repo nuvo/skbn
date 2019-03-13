@@ -2,8 +2,9 @@ package main
 
 import (
 	"log"
+	"time"
 
-	"github.com/nuvo/skbn/pkg/skbn"
+	"skbn/pkg/skbn"
 )
 
 func main() {
@@ -12,7 +13,10 @@ func main() {
 	parallel := 0     // all at once
 	bufferSize := 1.0 // 1GB of in memory buffer size
 
+	start := time.Now()
 	if err := skbn.Copy(src, dst, parallel, bufferSize); err != nil {
 		log.Fatal(err)
 	}
+	elapsed := time.Since(start)
+	log.Printf("Copy execution time: %s", elapsed)
 }

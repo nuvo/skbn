@@ -15,3 +15,7 @@ test/
 # dep/glide
 vendor/
 bin/
+
+# IntelliJ IDEA
+.idea/
+skbn.iml
