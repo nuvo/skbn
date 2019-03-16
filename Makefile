@@ -23,7 +23,7 @@ build: fmt vet
 # Build skbn docker image
 docker: fmt vet
 	cp bin/skbn skbn
-	docker build -t nuvo/skbn:latest .
+	docker build -t maorfr/skbn:latest .
 	rm skbn
 
 
@@ -33,7 +33,7 @@ ifdef TRAVIS
 ifdef DOCKER_USER
 ifdef DOCKER_PASSWORD
 	docker login -u $(DOCKER_USER) -p $(DOCKER_PASSWORD)
-	docker push nuvo/skbn:latest
+	docker push maorfr/skbn:latest
 endif
 endif
 endif

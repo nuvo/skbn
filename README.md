@@ -1,8 +1,8 @@
-[![Release](https://img.shields.io/github/release/nuvo/skbn.svg)](https://github.com/nuvo/skbn/releases)
-[![Travis branch](https://img.shields.io/travis/nuvo/skbn/master.svg)](https://travis-ci.org/nuvo/skbn)
-[![Docker Pulls](https://img.shields.io/docker/pulls/nuvo/skbn.svg)](https://hub.docker.com/r/nuvo/skbn/)
-[![Go Report Card](https://goreportcard.com/badge/github.com/nuvo/skbn)](https://goreportcard.com/report/github.com/nuvo/skbn)
-[![license](https://img.shields.io/github/license/nuvo/skbn.svg)](https://github.com/nuvo/skbn/blob/master/LICENSE)
+[![Release](https://img.shields.io/github/release/maorfr/skbn.svg)](https://github.com/maorfr/skbn/releases)
+[![Travis branch](https://img.shields.io/travis/maorfr/skbn/master.svg)](https://travis-ci.org/maorfr/skbn)
+[![Docker Pulls](https://img.shields.io/docker/pulls/maorfr/skbn.svg)](https://hub.docker.com/r/maorfr/skbn/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/maorfr/skbn)](https://goreportcard.com/report/github.com/maorfr/skbn)
+[![license](https://img.shields.io/github/license/maorfr/skbn.svg)](https://github.com/maorfr/skbn/blob/master/LICENSE)
 
 # Skbn
 
@@ -23,13 +23,13 @@ Skbn currently supports the following providers:
 
 ### From a release
 
-Download the latest release from the [Releases page](https://github.com/nuvo/skbn/releases) or use it with a [Docker image](https://hub.docker.com/r/nuvo/skbn)
+Download the latest release from the [Releases page](https://github.com/maorfr/skbn/releases) or use it with a [Docker image](https://hub.docker.com/r/maorfr/skbn)
 
 ### From source
 
 ```
-mkdir -p $GOPATH/src/github.com/nuvo && cd $_
-git clone https://github.com/nuvo/skbn.git && cd skbn
+mkdir -p $GOPATH/src/github.com/maorfr && cd $_
+git clone https://github.com/maorfr/skbn.git && cd skbn
 make
 ```
 

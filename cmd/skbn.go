@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/nuvo/skbn/pkg/skbn"
+	"github.com/maorfr/skbn/pkg/skbn"
 
 	"github.com/spf13/cobra"
 )

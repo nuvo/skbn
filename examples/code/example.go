@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/nuvo/skbn/pkg/skbn"
+	"github.com/maorfr/skbn/pkg/skbn"
 )
 
 func main() {
