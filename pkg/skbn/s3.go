@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"skbn/pkg/utils"
+	"github.com/maorfr/skbn/pkg/skbn"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"

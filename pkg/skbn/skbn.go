@@ -8,7 +8,7 @@ import (
 	"math"
 	"path/filepath"
 
-	"skbn/pkg/utils"
+	"github.com/maorfr/skbn/pkg/skbn"
 
 	"github.com/djherbis/buffer"
 	"gopkg.in/djherbis/nio.v2"

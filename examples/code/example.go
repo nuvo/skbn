@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"skbn/pkg/skbn"
+	"github.com/maorfr/skbn/pkg/skbn"
 )
 
 func main() {

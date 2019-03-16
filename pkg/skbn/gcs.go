@@ -3,15 +3,15 @@ package skbn
 import (
 	"context"
 	"fmt"
-	"google.golang.org/api/iterator"
 	"io"
 	"log"
 	"path/filepath"
 	"strings"
 
-	"skbn/pkg/utils"
+	"github.com/maorfr/skbn/pkg/utils"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/iterator"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
