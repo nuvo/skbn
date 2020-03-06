@@ -170,3 +170,18 @@ Skbn uses `AZURE_STORAGE_ACCOUNT` and `AZURE_STORAGE_ACCESS_KEY` environment var
 
 1. [In-cluster example](/examples/in-cluster)
 2. [Code example](/examples/code)
+
+## Troubleshooting
+
+### Auth Plugin issue
+
+It may happens when skbn try to authenticate to K8S cluster. You get the following error:
+
+```
+No Auth Provider found for name "XXX" 
+```
+When XXX may be: azure, gcp, oidc...
+
+To solve it, you have to uncomment the import of plugin that you need on `pkg/skbn/kube.go`
+
+Finally, build the project and it should work.
