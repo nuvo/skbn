@@ -87,8 +87,9 @@ func DownloadFromGcs(ctx context.Context, iClient interface{}, path string, writ
 	for attempt < attempts {
 		attempt++
 
-		if err := copyGcsFileToWriter(ctx, client, bucketName, gcsPath, writer); err != nil {
+		if err := copyGcsFileToWriter(ctx, *client, bucketName, gcsPath, writer); err != nil {
 			if attempt == attempts {
+				log.Println("Could not download file from GCS at", path)
 				return err
 			}
 			utils.Sleep(attempt)
@@ -97,12 +98,43 @@ func DownloadFromGcs(ctx context.Context, iClient interface{}, path string, writ
 		return nil
 	}
 
-	log.Println("Could not download file from GCS at", path)
 	return nil
 }
 
-func copyGcsFileToWriter(ctx context.Context, client *storage.Client, bucketName string, path string, writer io.Writer) error {
-	reader, err := client.Bucket(bucketName).Object(path).NewReader(ctx)
+// UploadToGCS uploads a single file to GCS
+func UploadToGcs(ctx context.Context, iClient interface{}, toPath, fromPath string, reader io.Reader) error {
+	client := iClient.(*storage.Client)
+	pSplit := strings.Split(toPath, "/")
+	if err := validateGcsPath(pSplit); err != nil {
+		return err
+	}
+	if len(pSplit) == 1 {
+		_, fileName := filepath.Split(fromPath)
+		pSplit = append(pSplit, fileName)
+	}
+	bucketName, gcsPath := initGcsVariables(pSplit)
+
+	attempts := 3
+	attempt := 0
+	for attempt < attempts {
+		attempt++
+
+		if err := copyReaderToGcs(ctx, *client, bucketName, gcsPath, reader); err != nil {
+			if attempt == attempts {
+				log.Println("Could not upload file to GCS at", toPath)
+				return err
+			}
+			utils.Sleep(attempt)
+			continue
+		}
+		return nil
+	}
+
+	return nil
+}
+
+func copyGcsFileToWriter(ctx context.Context, client storage.Client, bucket string, path string, writer io.Writer) error {
+	reader, err := client.Bucket(bucket).Object(path).NewReader(ctx)
 	defer func() {
 		if err := reader.Close(); err != nil {
 			log.Println("Error in reader.Close()", err)
@@ -112,6 +144,21 @@ func copyGcsFileToWriter(ctx context.Context, client *storage.Client, bucketName
 	if err != nil {
 		return err
 	}
+
+	if _, err := io.Copy(writer, reader); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func copyReaderToGcs(ctx context.Context, client storage.Client, bucket string, path string, reader io.Reader) error {
+	writer := client.Bucket(bucket).Object(path).NewWriter(ctx)
+	defer func() {
+		if err := writer.Close(); err != nil {
+			log.Println("Error in writer.Close()", err)
+		}
+	}()
 
 	if _, err := io.Copy(writer, reader); err != nil {
 		return err
