@@ -67,6 +67,14 @@ skbn cp \
     --dst k8s://<namespace>/<podName>/<containerName>/<path>
 ```
 
+### Copy files from Google Cloud Storage to Kubernetes
+
+```
+skbn cp \
+    --src gcs://<bucket>/<path> \
+    --dst k8s://<namespace>/<podName>/<containerName>/<path>
+```
+
 ## Advanced usage
 
 ### Copy files from source to destination in parallel
@@ -122,6 +130,22 @@ skbn cp \
     --dst s3://<bucket>/<path>
 ```
 
+### Copy file from S3 to Google Cloud Storage
+
+```
+skbn cp \
+    --src s3://<bucket>/<path> \
+    --dst gcs://<bucket>/<path>
+```
+
+### Copy file from Google Cloud Storage to S3
+
+```
+skbn cp \
+    --src gcs://<bucket>/<path> \
+    --dst s3://<bucket>/<path>
+```
+
 ### Copy files from Kubernetes to Kubernetes
 
 ```
@@ -146,6 +170,14 @@ skbn cp \
     --dst abs://<account>/<container>/<path>
 ```
 
+### Copy files from Google Cloud Storage to Google Cloud Storage
+
+```
+skbn cp \
+    --src gcs://<bucket>/<path> \
+    --dst gcs://<bucket>/<path>
+```
+
 ## Credentials
 
 
@@ -165,6 +197,10 @@ In addition, the `AWS_REGION` environment variable should be set (default is `eu
 ### Azure Blob Storage
 
 Skbn uses `AZURE_STORAGE_ACCOUNT` and `AZURE_STORAGE_ACCESS_KEY` environment variables for authentication.
+
+### Google Cloud Storage
+
+Skbn uses Google [Application Default Credentials](https://cloud.google.com/docs/authentication/production). It will use `GOOGLE_APPLICATION_CREDENTIALS` environment variables to find the service account key json file. 
 
 ## Examples
 

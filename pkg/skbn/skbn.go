@@ -51,6 +51,7 @@ func TestImplementationsExist(srcPrefix, dstPrefix string) error {
 	case "k8s":
 	case "s3":
 	case "abs":
+	case "gcs":
 	default:
 		return fmt.Errorf(srcPrefix + " not implemented")
 	}
@@ -59,6 +60,7 @@ func TestImplementationsExist(srcPrefix, dstPrefix string) error {
 	case "k8s":
 	case "s3":
 	case "abs":
+	case "gcs":
 	default:
 		return fmt.Errorf(dstPrefix + " not implemented")
 	}
@@ -203,6 +205,12 @@ func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
 			return nil, err
 		}
 		relativePaths = paths
+	case "gcs":
+		paths, err := GetListOfFilesFromGcs(ctx, client, path)
+		if err != nil {
+			return nil, err
+		}
+		relativePaths = paths
 	default:
 		return nil, fmt.Errorf(prefix + " not implemented")
 	}
@@ -231,6 +239,11 @@ func Download(srcClient interface{}, srcPrefix, srcPath string, writer io.Writer
 		if err != nil {
 			return err
 		}
+	case "gcs":
+		err := DownloadFromGcs(ctx, srcClient, srcPath, writer)
+		if err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf(srcPrefix + " not implemented")
 	}
@@ -256,6 +269,11 @@ func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, reader io
 		}
 	case "abs":
 		err := UploadToAbs(ctx, dstClient, dstPath, srcPath, reader)
+		if err != nil {
+			return err
+		}
+	case "gcs":
+		err := UploadToGcs(ctx, dstClient, dstPath, srcPath, reader)
 		if err != nil {
 			return err
 		}
@@ -296,6 +314,17 @@ func initClient(ctx context.Context, existingClient interface{}, prefix, path, t
 			break
 		}
 		client, err := GetClientToAbs(ctx, path)
+		if err != nil {
+			return nil, "", err
+		}
+		newClient = client
+
+	case "gcs":
+		if isTestedAndClientExists(prefix, tested, existingClient) {
+			newClient = existingClient
+			break
+		}
+		client, err := GetClientToGcs(ctx, path)
 		if err != nil {
 			return nil, "", err
 		}
