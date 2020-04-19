@@ -25,4 +25,4 @@ dockers:
 - binary: skbn
   dockerfile: Dockerfile
   image_templates:
-  - "maorfr/{{.ProjectName}}:{{ .Tag }}"
+  - "nuvo/{{.ProjectName}}:{{ .Tag }}"

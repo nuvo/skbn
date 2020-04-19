@@ -16,7 +16,7 @@ spec:
       serviceAccountName: skbn
       containers:
       - name: skbn
-        image: maorfr/skbn
+        image: nuvo/skbn
         command: ["skbn"]
         args:
         - cp

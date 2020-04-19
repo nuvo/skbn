@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/maorfr/skbn/pkg/utils"
+	"github.com/nuvo/skbn/pkg/utils"
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
