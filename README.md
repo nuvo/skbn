@@ -16,11 +16,6 @@ Skbn currently supports the following providers:
 
 ## Install
 
-### Prerequisites
-
-1. git
-2. [dep](https://github.com/golang/dep)
-
 ### From a release
 
 Download the latest release from the [Releases page](https://github.com/nuvo/skbn/releases) or use it with a [Docker image](https://hub.docker.com/r/nuvo/skbn)
