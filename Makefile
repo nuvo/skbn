@@ -1,5 +1,5 @@
-HAS_DEP := $(shell command -v dep;)
-DEP_VERSION := v0.5.0
+# HAS_DEP := $(shell command -v dep;)
+# DEP_VERSION := v0.5.0
 GIT_TAG := $(shell git describe --tags --always)
 GIT_COMMIT := $(shell git rev-parse --short HEAD)
 LDFLAGS := "-X main.GitTag=${GIT_TAG} -X main.GitCommit=${GIT_COMMIT}"
@@ -39,11 +39,11 @@ endif
 endif
 
 bootstrap:
-ifndef HAS_DEP
-	wget -q -O $(GOPATH)/bin/dep https://github.com/golang/dep/releases/download/$(DEP_VERSION)/dep-linux-amd64
-	chmod +x $(GOPATH)/bin/dep
-endif
-	dep ensure
+# ifndef HAS_DEP
+# 	wget -q -O $(GOPATH)/bin/dep https://github.com/golang/dep/releases/download/$(DEP_VERSION)/dep-linux-amd64
+# 	chmod +x $(GOPATH)/bin/dep
+# endif
+#	dep ensure
 
 dist:
 	mkdir -p $(DIST)

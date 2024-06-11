@@ -84,7 +84,7 @@ func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, writ
 	}
 
 	bu := getBlobURL(cu, p)
-	dr, err := bu.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
+	dr, err := bu.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false, azblob.ClientProvidedKeyOptions{})
 	if err != nil {
 		return err
 	}
