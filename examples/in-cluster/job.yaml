@@ -11,24 +11,28 @@ spec:
       labels:
         name: test-skbn
         app: test-skbn
+        spotinst.io/restrict-scale-down: "true"         
       annotations:
-        iam.amazonaws.com/role: test-dbbackup-operator 
+        iam.amazonaws.com/role: test-dbbackup-operator
+
     spec:
       restartPolicy: OnFailure
       serviceAccount: opsflow
       containers:
       - name: test-skbn
-        image: nuvo/skbn:0.4.2
+        image: nuvo/skbn:0.5.6
         resources:
           limits:
-            memory: "4Gi"
-            cpu: "4000m"
+            memory: "3Gi"
+            cpu: "2000m"
         command: ["skbn"]
         args: [
           "cp", 
-          "--parallel", "15", 
+          "--parallel", "1", 
           "--src", "k8s://invu-sre/cassandra-primary-r1-sts-0/cassandra/var/lib/cassandra/test.file", 
-          "--dst", "s3://nuvo-dev-dbbackup/test.file"
+          "--dst", "s3://nuvo-dev-dbbackup/test.file",
+          "--buffer-size", "512",
+          "--verbose"
         ]
         env:
         - name: AWS_REGION

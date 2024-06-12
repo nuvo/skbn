@@ -3,6 +3,7 @@ package skbn
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -80,10 +81,13 @@ func GetListOfFilesFromS3(iClient interface{}, path string) ([]string, error) {
 }
 
 // DownloadFromS3 downloads a single file from S3
-func DownloadFromS3(iClient interface{}, path string, writer io.Writer) error {
+func DownloadFromS3(iClient interface{}, path string, writer io.Writer, verbose bool) error {
 	s := iClient.(*session.Session)
 	pSplit := strings.Split(path, "/")
 	if err := validateS3Path(pSplit); err != nil {
+		if verbose {
+			log.Printf("validate s3 path error: %s", err)
+		}
 		return err
 	}
 	bucket, s3Path := initS3Variables(pSplit)
@@ -93,6 +97,10 @@ func DownloadFromS3(iClient interface{}, path string, writer io.Writer) error {
 	for attempt < attempts {
 		attempt++
 
+		if verbose {
+			log.Printf("Attempt %d to download file from s3://%s/%s", attempt, bucket, s3Path)
+		}
+
 		downloader := s3manager.NewDownloader(s)
 		downloader.Concurrency = 1 // support writerWrapper
 
@@ -101,8 +109,19 @@ func DownloadFromS3(iClient interface{}, path string, writer io.Writer) error {
 				Bucket: aws.String(bucket),
 				Key:    aws.String(s3Path),
 			})
+
+		if verbose {
+			log.Printf("Downloaded file from s3://%s/%s", bucket, s3Path)
+		}
 		if err != nil {
+			if verbose {
+				log.Printf("Error: %v", err)
+				log.Printf("Attempt: %v", attempt)
+			}
 			if attempt == attempts {
+				if verbose {
+					log.Printf("This was last attempt")
+				}
 				return err
 			}
 			utils.Sleep(attempt)
@@ -123,10 +142,13 @@ func (ww writerWrapper) WriteAt(p []byte, off int64) (n int, err error) {
 }
 
 // UploadToS3 uploads a single file to S3
-func UploadToS3(iClient interface{}, toPath, fromPath string, reader io.Reader) error {
+func UploadToS3(iClient interface{}, toPath, fromPath string, reader io.Reader, s3partSize int64, s3maxUploadParts int, verbose bool) error {
 	s := iClient.(*session.Session)
 	pSplit := strings.Split(toPath, "/")
 	if err := validateS3Path(pSplit); err != nil {
+		if verbose {
+			log.Printf("validate s3 path error: %s", err)
+		}
 		return err
 	}
 	if len(pSplit) == 1 {
@@ -140,15 +162,34 @@ func UploadToS3(iClient interface{}, toPath, fromPath string, reader io.Reader) 
 	for attempt < attempts {
 		attempt++
 
-		uploader := s3manager.NewUploader(s)
+		if verbose {
+			log.Printf("Attempt %d to upload file to s3://%s/%s", attempt, bucket, s3Path)
+		}
+
+		// uploader := s3manager.NewUploader(s)
+		uploader := s3manager.NewUploader(s, func(u *s3manager.Uploader) {
+			u.PartSize = s3partSize
+			u.MaxUploadParts = s3maxUploadParts
+		})
 
 		_, err := uploader.Upload(&s3manager.UploadInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(s3Path),
 			Body:   reader,
 		})
+
+		if verbose {
+			log.Printf("Uploaded file to s3://%s/%s", bucket, s3Path)
+		}
 		if err != nil {
+			if verbose {
+				log.Printf("Error: %v", err)
+				log.Printf("Attempt: %v", attempt)
+			}
 			if attempt == attempts {
+				if verbose {
+					log.Printf("This was last attempt")
+				}
 				return err
 			}
 			utils.Sleep(attempt)
@@ -158,6 +199,16 @@ func UploadToS3(iClient interface{}, toPath, fromPath string, reader io.Reader) 
 	}
 
 	return nil
+}
+
+// calculatePartSize calculates an appropriate part size for the multipart upload
+func calculatePartSize(fileSize int64) int64 {
+	const maxParts = 10000
+	partSize := fileSize / maxParts
+	if partSize < 5*1024*1024 {
+		partSize = 5 * 1024 * 1024 // Minimum part size of 5 MB
+	}
+	return partSize
 }
 
 func getNewSession() (*session.Session, error) {

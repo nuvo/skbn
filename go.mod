@@ -7,8 +7,8 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/aws/aws-sdk-go v1.53.20
 	github.com/djherbis/buffer v1.2.0
+	github.com/djherbis/nio/v3 v3.0.1
 	github.com/spf13/cobra v1.8.0
-	gopkg.in/djherbis/nio.v2 v2.0.3
 	k8s.io/api v0.0.0-20181204000039-89a74a8d264d
 	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
 	k8s.io/client-go v10.0.0+incompatible

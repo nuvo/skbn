@@ -70,7 +70,7 @@ func GetListOfFilesFromAbs(ctx context.Context, iClient interface{}, path string
 }
 
 // DownloadFromAbs downloads a single file from azure blob storage
-func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, writer io.Writer) error {
+func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, writer io.Writer, verbose bool) error {
 	pSplit := strings.Split(path, "/")
 
 	if err := validateAbsPath(pSplit); err != nil {
@@ -100,7 +100,7 @@ func DownloadFromAbs(ctx context.Context, iClient interface{}, path string, writ
 }
 
 // UploadToAbs uploads a single file to azure blob storage
-func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath string, reader io.Reader) error {
+func UploadToAbs(ctx context.Context, iClient interface{}, toPath, fromPath string, reader io.Reader, verbose bool) error {
 	pSplit := strings.Split(toPath, "/")
 	if err := validateAbsPath(pSplit); err != nil {
 		return err
