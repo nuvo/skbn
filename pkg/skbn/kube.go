@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,7 +106,7 @@ func GetListOfFilesFromK8s(iClient interface{}, path, findType, findName string)
 }
 
 // DownloadFromK8s downloads a single file from Kubernetes
-func DownloadFromK8s(iClient interface{}, path string, writer io.Writer) error {
+func DownloadFromK8s(iClient interface{}, path string, writer io.Writer, verbose bool) error {
 	client := *iClient.(*K8sClient)
 	pSplit := strings.Split(path, "/")
 	if err := validateK8sPath(pSplit); err != nil {
@@ -118,13 +119,24 @@ func DownloadFromK8s(iClient interface{}, path string, writer io.Writer) error {
 	attempt := 0
 	for attempt < attempts {
 		attempt++
+		if verbose {
+			log.Printf("Attempt %d to download file from %s/%s/%s:%s", attempt, namespace, podName, containerName, pathToCopy)
+		}
 
 		stderr, err := Exec(client, namespace, podName, containerName, command, nil, writer)
+
+		if (verbose && len(stderr) != 0) || err != nil {
+			log.Printf("STDERR: %s", stderr)
+			log.Printf("Error: %v", err)
+		}
 		if attempt == attempts {
+			log.Printf("this was last attempt")
 			if len(stderr) != 0 {
+				log.Printf("STDERR: %s", stderr)
 				return fmt.Errorf("STDERR: " + (string)(stderr))
 			}
 			if err != nil {
+				log.Printf("Error: %v", err)
 				return err
 			}
 		}
@@ -138,7 +150,7 @@ func DownloadFromK8s(iClient interface{}, path string, writer io.Writer) error {
 }
 
 // UploadToK8s uploads a single file to Kubernetes
-func UploadToK8s(iClient interface{}, toPath, fromPath string, reader io.Reader) error {
+func UploadToK8s(iClient interface{}, toPath, fromPath string, reader io.Reader, verbose bool) error {
 	client := *iClient.(*K8sClient)
 	pSplit := strings.Split(toPath, "/")
 	if err := validateK8sPath(pSplit); err != nil {

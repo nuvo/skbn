@@ -1,30 +1,40 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
+  name: test-skbn
   labels:
-    app: skbn
-  name: skbn
+    name: test-skbn
+    app: test-skbn
 spec:
   template:
     metadata:
       labels:
-        app: skbn
+        name: test-skbn
+        app: test-skbn
+        spotinst.io/restrict-scale-down: "true"         
       annotations:
-        iam.amazonaws.com/role: skbn # We are using kube2iam
+        iam.amazonaws.com/role: test-dbbackup-operator
+
     spec:
       restartPolicy: OnFailure
-      serviceAccountName: skbn
+      serviceAccount: opsflow
       containers:
-      - name: skbn
-        image: nuvo/skbn
+      - name: test-skbn
+        image: nuvo/skbn:0.5.6
+        resources:
+          limits:
+            memory: "3Gi"
+            cpu: "2000m"
         command: ["skbn"]
-        args:
-        - cp
-        - --src
-        - k8s://namespace/pod/container/path/to/copy/from
-        - --dst
-        - s3://bucket/path/to/copy/to
-        imagePullPolicy: IfNotPresent
+        args: [
+          "cp", 
+          "--parallel", "1", 
+          "--src", "k8s://invu-sre/cassandra-primary-r1-sts-0/cassandra/var/lib/cassandra/test.file", 
+          "--dst", "s3://nuvo-dev-dbbackup/test.file",
+          "--buffer-size", "512",
+          "--verbose"
+        ]
         env:
         - name: AWS_REGION
-          value: eu-central-1
+          value: us-east-1
+        imagePullPolicy: IfNotPresent

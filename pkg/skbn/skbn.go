@@ -11,7 +11,7 @@ import (
 	"github.com/nuvo/skbn/pkg/utils"
 
 	"github.com/djherbis/buffer"
-	"gopkg.in/djherbis/nio.v2"
+	"github.com/djherbis/nio/v3"
 )
 
 // FromToPair is a pair of FromPath and ToPath
@@ -21,7 +21,7 @@ type FromToPair struct {
 }
 
 // Copy copies files from src to dst
-func Copy(src, dst string, parallel int, bufferSize float64) error {
+func Copy(src, dst string, parallel int, bufferSize float64, s3partSize int64, s3maxUploadParts int, verbose bool) error {
 	srcPrefix, srcPath := utils.SplitInTwo(src, "://")
 	dstPrefix, dstPath := utils.SplitInTwo(dst, "://")
 
@@ -37,7 +37,7 @@ func Copy(src, dst string, parallel int, bufferSize float64) error {
 	if err != nil {
 		return err
 	}
-	err = PerformCopy(srcClient, dstClient, srcPrefix, dstPrefix, fromToPaths, parallel, bufferSize)
+	err = PerformCopy(srcClient, dstClient, srcPrefix, dstPrefix, fromToPaths, parallel, bufferSize, s3partSize, s3maxUploadParts, verbose)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func GetFromToPaths(srcClient interface{}, srcPrefix, srcPath, dstPath string) (
 }
 
 // PerformCopy performs the actual copy action
-func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, fromToPaths []FromToPair, parallel int, bufferSize float64) error {
+func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, fromToPaths []FromToPair, parallel int, bufferSize float64, s3partSize int64, s3maxUploadParts int, verbose bool) error {
 
 	// Execute in parallel
 	totalFiles := len(fromToPaths)
@@ -141,7 +141,7 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 				if len(errc) != 0 {
 					return
 				}
-				err := Download(srcClient, srcPrefix, fromPath, pw)
+				err := Download(srcClient, srcPrefix, fromPath, pw, verbose)
 				if err != nil {
 					log.Println(err, fmt.Sprintf(" src: file: %s", fromPath))
 					errc <- err
@@ -149,13 +149,13 @@ func PerformCopy(srcClient, dstClient interface{}, srcPrefix, dstPrefix string, 
 			}()
 
 			go func() {
-				defer pr.Close()
 				defer bwg.Done()
+				defer pr.Close()
 				if len(errc) != 0 {
 					return
 				}
 				defer log.Printf("[%s/%d] done: %s://%s -> %s://%s", currentLinePadded, totalFiles, srcPrefix, fromPath, dstPrefix, toPath)
-				err := Upload(dstClient, dstPrefix, toPath, fromPath, pr)
+				err := Upload(dstClient, dstPrefix, toPath, fromPath, pr, s3partSize, s3maxUploadParts, verbose)
 				if err != nil {
 					log.Println(err, fmt.Sprintf(" dst: file: %s", toPath))
 					errc <- err
@@ -211,23 +211,23 @@ func GetListOfFiles(client interface{}, prefix, path string) ([]string, error) {
 }
 
 // Download downloads a single file from path into an io.Writer
-func Download(srcClient interface{}, srcPrefix, srcPath string, writer io.Writer) error {
+func Download(srcClient interface{}, srcPrefix, srcPath string, writer io.Writer, verbose bool) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	switch srcPrefix {
 	case "k8s":
-		err := DownloadFromK8s(srcClient, srcPath, writer)
+		err := DownloadFromK8s(srcClient, srcPath, writer, verbose)
 		if err != nil {
 			return err
 		}
 	case "s3":
-		err := DownloadFromS3(srcClient, srcPath, writer)
+		err := DownloadFromS3(srcClient, srcPath, writer, verbose)
 		if err != nil {
 			return err
 		}
 	case "abs":
-		err := DownloadFromAbs(ctx, srcClient, srcPath, writer)
+		err := DownloadFromAbs(ctx, srcClient, srcPath, writer, verbose)
 		if err != nil {
 			return err
 		}
@@ -239,23 +239,23 @@ func Download(srcClient interface{}, srcPrefix, srcPath string, writer io.Writer
 }
 
 // Upload uploads a single file provided as an io.Reader array to path
-func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, reader io.Reader) error {
+func Upload(dstClient interface{}, dstPrefix, dstPath, srcPath string, reader io.Reader, s3partSize int64, s3maxUploadParts int, verbose bool) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	switch dstPrefix {
 	case "k8s":
-		err := UploadToK8s(dstClient, dstPath, srcPath, reader)
+		err := UploadToK8s(dstClient, dstPath, srcPath, reader, verbose)
 		if err != nil {
 			return err
 		}
 	case "s3":
-		err := UploadToS3(dstClient, dstPath, srcPath, reader)
+		err := UploadToS3(dstClient, dstPath, srcPath, reader, s3partSize, s3maxUploadParts, verbose)
 		if err != nil {
 			return err
 		}
 	case "abs":
-		err := UploadToAbs(ctx, dstClient, dstPath, srcPath, reader)
+		err := UploadToAbs(ctx, dstClient, dstPath, srcPath, reader, verbose)
 		if err != nil {
 			return err
 		}
